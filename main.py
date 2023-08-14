@@ -12,3 +12,17 @@ while True:
         display.scroll(data_received)
         uart.write(data_received)
         display.show(Image.HEART)
+
+
+        # configure the radio
+    radio.config(channel=7, power=7)
+
+    # turn on the radio
+    radio.on()
+    while True:
+        # receive a message
+        message = radio.receive()
+        if(message == "right"):
+
+
+            radio.send("reverse")

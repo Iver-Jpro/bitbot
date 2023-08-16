@@ -6,33 +6,46 @@ __I2CADDR = 0x1c  # address of PCA9557
 RIGHT = "right"
 LEFT = "left"
 
+LEFT_LF = (0x01)
+RIGHT_LF =(0x02)
 
 
-def linesensor(direction):
-    """Read line sensor."""
-
-    dir = direction
-    if dir == LEFT:
-        return getLine(0)
-    elif dir == RIGHT:
-        return getLine(1)
-
-def getLine(bit):
-    """Reads value of left or right line sensor."""
-
-    mask = 1 << bit
-    value = 0
+def getLinesensorStatus():
     try:
-        redVal = i2c.read(__I2CADDR, 1)
-        if(redVal != None):
-            value = redVal[0]
-
+        value = i2c.read(__I2CADDR, 1)
+        print("value: ", value)
+        if (value is not None):
+            return value[0] & (LEFT_LF | RIGHT_LF)
     except OSError:
         pass
-    if (value & mask) > 0:
-        return 1
-    else:
-        return 0
+    return 0
+
+def linesensor(direction):
+    return getLinesensorStatus()
+#     """Read line sensor."""
+#
+#     dir = direction
+#     if dir == LEFT:
+#         return getLine(0)
+#     elif dir == RIGHT:
+#         return getLine(1)
+#
+# def getLine(bit):
+#     """Reads value of left or right line sensor."""
+#
+#     mask = 1 << bit
+#     value = 0
+#     try:
+#         redVal = i2c.read(__I2CADDR, 1)
+#         if(redVal != None):
+#             value = redVal[0]
+#
+#     except OSError:
+#         pass
+#     if (value & mask) > 0:
+#         return 1
+#     else:
+#         return 0
 
 
 controlWait = 3

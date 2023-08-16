@@ -172,6 +172,9 @@ class PN532:
                     if response is not None:
                         global tags
                         if response not in tags:
+
+                            drive.stop()
+
                             tags.add(response)
                             global mostRecentTagTime
                             mostRecentTagTime = currentRFIDTime
@@ -310,12 +313,22 @@ class Drive:
     def driveForward(self):
         if self.state == DriveState.READY:
             self.state = DriveState.FORWARD
+
+        for pixel_id in range(0, 11):
+            fireleds[pixel_id] = (0, 0, 0)
+
         if self.getLinesensorStatus() & self.LEFT_LF:
-            self.adjustMotors(self.TORQUE, self.SLOW_TORQUE)
-        elif self.getLinesensorStatus() & self.RIGHT_LF:
             self.adjustMotors(self.SLOW_TORQUE, self.TORQUE)
+            for pixel_id in range(0, 5):
+                fireleds[pixel_id] = (0,50,0)
+        elif self.getLinesensorStatus() & self.RIGHT_LF:
+            self.adjustMotors(self.TORQUE, self.SLOW_TORQUE)
+            for pixel_id in range(6, 11):
+                fireleds[pixel_id] = (0,50,0)
         else:
             self.adjustMotors(self.TORQUE, self.TORQUE)
+
+        fireleds.show()
 
     def handleDrive(self):
         if self.state is DriveState.READY:

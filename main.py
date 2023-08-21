@@ -254,7 +254,10 @@ class Drive:
     TURN_TORQUE = 200
     SLOW_TORQUE = 0
 
+    MINIMUM_TURN_TIME = 300 # ms
+
     linesPassed = 0
+    startedTurning = 0
     isOnLine = False
 
     def __init__(self):
@@ -299,6 +302,7 @@ class Drive:
                 self.isOnLine = False
             self.state = DriveState.TURNING_LEFT
             self.adjustMotors(0, self.TORQUE)
+            self.startedTurning = running_time()
         elif self.state == DriveState.TURNING_LEFT:
             self.keepTurning(self.LEFT_LF)
 
@@ -306,7 +310,8 @@ class Drive:
         status = self.getLinesensorStatus()
         if self.isOnLine:
             if not (status & direction):
-                self.linesPassed += 1
+                if self.linesPassed<1 or running_time() - self.startedTurning > self.MINIMUM_TURN_TIME:
+                    self.linesPassed += 1
                 self.isOnLine = False
         elif status & direction:
             self.isOnLine = True
@@ -324,6 +329,7 @@ class Drive:
                 self.isOnLine = False
             self.state = DriveState.TURNING_RIGHT
             self.adjustMotors(self.TORQUE, 0)
+            self.startedTurning = running_time()
         elif self.state == DriveState.TURNING_RIGHT:
             self.keepTurning(self.RIGHT_LF)
 

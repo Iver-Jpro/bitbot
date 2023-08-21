@@ -24,7 +24,7 @@ class Globals:
             4081897461: Card(1, False),
         }
 
-        self.gameTime = 20000
+        self.gameTime = 200000 #TODO fjern en null
         self.tagDisplayTime = 2000
 
         self.tags = set()
@@ -251,7 +251,7 @@ class Drive:
     RIGHT_LF = const(0x02)
 
     TORQUE = 300
-    TURN_TORQUE = 200
+    TURN_TORQUE = 250
     SLOW_TORQUE = 0
 
     MINIMUM_TURN_TIME = 300 # ms
@@ -341,11 +341,9 @@ class Drive:
             else:
                 self.linesPassed = 1
                 self.isOnLine = False
-            self.adjustMotors(-self.TORQUE, self.TORQUE)
+            self.adjustMotors(-self.TURN_TORQUE, self.TURN_TORQUE)
             self.state = DriveState.TURNING_AROUND
-            radio.send(str("turning 180"))
         elif self.state == DriveState.TURNING_AROUND:
-            radio.send(str("turning around round round round turning around!"))
             status = self.getLinesensorStatus()
             if self.isOnLine:
                 if not (status & self.LEFT_LF):

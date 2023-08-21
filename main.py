@@ -255,6 +255,8 @@ class Drive:
     SLOW_TORQUE = 0
 
     MINIMUM_TURN_TIME = 300 # ms
+    EXPECTED_TURN_TIME = 440 # ms
+    EXPECTED_U_TURN_TIME = 1000 # ms
 
     linesPassed = 0
     startedTurning = 0
@@ -274,6 +276,7 @@ class Drive:
         return 0
 
     def adjustMotors(self, left, right):
+        radio.send("left: " + str(left) + " right: " + str(right))
         if left >= 0:
             pin16.write_analog(left)
             pin8.write_analog(0)
@@ -287,6 +290,7 @@ class Drive:
         else:
             pin14.write_analog(0)
             pin12.write_analog(-right)
+        radio.send("Adjusted motors")
 
     def stop(self):
         self.adjustMotors(0, 0)
@@ -294,6 +298,7 @@ class Drive:
 
     def turnLeft(self):
         if self.state == DriveState.READY:
+            #radio.send("LEFT")
             if self.getLinesensorStatus() & self.LEFT_LF:
                 self.linesPassed = 0
                 self.isOnLine = True
@@ -308,19 +313,26 @@ class Drive:
 
     def keepTurning(self, direction):
         status = self.getLinesensorStatus()
-        if self.isOnLine:
-            if not (status & direction):
-                if self.linesPassed<1 or running_time() - self.startedTurning > self.MINIMUM_TURN_TIME:
-                    self.linesPassed += 1
-                self.isOnLine = False
-        elif status & direction:
-            self.isOnLine = True
-        if self.linesPassed >= 2:
+        # if self.isOnLine:
+        #     if not (status & direction):
+        #         if self.linesPassed<1 or running_time() - self.startedTurning > self.MINIMUM_TURN_TIME:
+        #             self.linesPassed += 1
+        #         self.isOnLine = False
+        # elif status & direction:
+        #     self.isOnLine = True
+        # if self.linesPassed >= 2:
+        if status & direction and running_time() - self.startedTurning > self.EXPECTED_TURN_TIME:
             self.adjustMotors(self.TORQUE, self.TORQUE)
             self.state = DriveState.FORWARD
+            if(direction== self.LEFT_LF):
+               dircode="L"
+            else:
+                dircode="R"
+            radio.send(dircode+": " + str(running_time() - self.startedTurning))
 
     def turnRight(self):
         if self.state == DriveState.READY:
+            #radio.send("RIGHT")
             if self.getLinesensorStatus() & self.RIGHT_LF:
                 self.linesPassed = 0
                 self.isOnLine = True
@@ -335,6 +347,8 @@ class Drive:
 
     def turn180(self):
         if self.state == DriveState.READY:
+            self.startedTurning = running_time()
+            #radio.send("180")
             if self.getLinesensorStatus() & self.LEFT_LF:
                 self.linesPassed = 0
                 self.isOnLine = True
@@ -345,19 +359,22 @@ class Drive:
             self.state = DriveState.TURNING_AROUND
         elif self.state == DriveState.TURNING_AROUND:
             status = self.getLinesensorStatus()
-            if self.isOnLine:
-                if not (status & self.LEFT_LF):
-                    self.linesPassed += 1
-                    self.isOnLine = False
-            elif status & self.LEFT_LF:
-                self.isOnLine = True
-
-            if self.linesPassed >= 3:
+            # if self.isOnLine:
+            #     if not (status & self.LEFT_LF):
+            #         self.linesPassed += 1
+            #         self.isOnLine = False
+            # elif status & self.LEFT_LF:
+            #     self.isOnLine = True
+            #
+            # if self.linesPassed >= 3:
+            if status & self.LEFT_LF and running_time() - self.startedTurning > self.EXPECTED_U_TURN_TIME:
                 self.adjustMotors(self.TORQUE, self.TORQUE)
                 self.state = DriveState.FORWARD
+                radio.send("U: " + str(running_time() - self.startedTurning))
 
     def driveForward(self):
         if self.state == DriveState.READY:
+            #radio.send("FORWARD")
             self.state = DriveState.FORWARD
 
         if self.getLinesensorStatus() & self.LEFT_LF:
@@ -452,6 +469,7 @@ display.on()
 pn532 = PN532(i2c)
 drive = Drive()
 
+
 while True:
     initializeNextRun(globals)
 
@@ -463,32 +481,33 @@ while True:
     setLEDs(globals.fireleds, 0, 0, 0, 0)
     globals.runIsStarted = True
     currentGameStartTime = running_time()
+    try:
+        while True:
+            runningTime = running_time()
 
-    while True:
-        runningTime = running_time()
+            # Exit run if it has used up allowed time
+            if runningTime >= (currentGameStartTime + globals.gameTime):
+                break
 
-        # Exit run if it has used up allowed time
-        if runningTime >= (currentGameStartTime + globals.gameTime):
-            break
+            pn532.handleRFID(globals)
 
-        pn532.handleRFID(globals)
+            if not drive.handleDrive(globals):
+                break
 
-        if not drive.handleDrive(globals):
-            break
-
-        # Light up LEDs if tag is found
-        if globals.mostRecentTagTime != 0 and runningTime <= (
-                globals.mostRecentTagTime + globals.tagDisplayTime
-        ):
-            setLEDs(
-                globals.fireleds,
-                0,
-                1.0,
-                0,
-                ((globals.mostRecentTagTime + globals.tagDisplayTime) - runningTime)
-                / globals.tagDisplayTime,
-                )
-
+            # Light up LEDs if tag is found
+            if globals.mostRecentTagTime != 0 and runningTime <= (
+                    globals.mostRecentTagTime + globals.tagDisplayTime
+            ):
+                setLEDs(
+                    globals.fireleds,
+                    0,
+                    1.0,
+                    0,
+                    ((globals.mostRecentTagTime + globals.tagDisplayTime) - runningTime)
+                    / globals.tagDisplayTime,
+                    )
+    except (Exception):
+        display.show(Image.SKULL)
     endRun(globals, drive)
 
     sleep(5000)

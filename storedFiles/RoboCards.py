@@ -11,6 +11,7 @@ ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
+MAX_PLAYS = 3
 
 class Nexus():
     xPosition = ""
@@ -138,6 +139,7 @@ class App(tk.Tk):
 
     def __init__(self):
         super().__init__()
+        self.play_count = 0
         self.title("JRobotics Racing")
         self.geometry(f"{5 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
         self.configure(bg=BG_COLOR)  # Set the window background color
@@ -283,30 +285,28 @@ class App(tk.Tk):
         while not self.timer_running:
 
             if self.ser.in_waiting > 1:
-                print("reading " + str(self.ser.in_waiting) + " bytes")
+
                 message = self.ser.read(64).decode('utf-8')
                 print(message)
 
                 find = message.find("RUN_END")
                 if find > 1:
-                    print("final message:")
-                    print(message)
 
                     final_rfid = int(message[0:find])
                     if gameboard.get(final_rfid) != None:
-                        print("Found gameboard position")
                         self.score += gameboard.get(final_rfid).points
                         self.after(0, self.update_score_display)
                     else:
                         print("you did not parse correctly")
-
-                    self.after(0, self.display_game_over())
+                    self.play_count += 1
+                    if(self.play_count >= 3):
+                        self.after(0, self.display_game_over())
+                        self.play_count = 0
                     break
 
                 else:
                     rfid = int(message)
                     if gameboard.get(rfid) != None:
-                        print("Found gameboard position")
                         self.score += gameboard.get(rfid).points
                         self.after(0, self.update_score_display)
 

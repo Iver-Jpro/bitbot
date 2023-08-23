@@ -5,19 +5,16 @@ import serial
 
 from PIL import Image, ImageTk
 
+BG_COLOR = '#FFE1B7'
+
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
 class Card(tk.Label):
     def __init__(self, parent, index, **kwargs):
 
-        # self.image = tk.PhotoImage(file=f"C:\\dev\\linerider\\storedFiles\\roborally {random.choice('LRFU')}.png")
-        # # Calculate the subsample factors based on the image size and card size
-        # x_factor = self.image.width() // CARD_WIDTH
-        # y_factor = self.image.height() // CARD_HEIGHT
-        # self.display_image = self.image.subsample(x_factor, y_factor)
-
-        self.load_image(random.choice('LRFU'))
+        self.code= random.choice('LRFU')
+        self.load_image(self.code)
         super().__init__(parent, image=self.display_image, borderwidth=2, relief="ridge")
 
         self.index = index
@@ -75,7 +72,12 @@ class Card(tk.Label):
 
 class Slot(tk.Label):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
+        self.bg_image = tk.PhotoImage(file="C:\\dev\\linerider\\storedFiles\\roborally background.png")
+        x_factor = self.bg_image.width() // round(CARD_WIDTH/1.5)
+        y_factor = self.bg_image.height() // round(CARD_HEIGHT/1.5)
+        self.display_image = self.bg_image.subsample(x_factor, y_factor)
+
+        super().__init__(parent, image=self.display_image)
         self.card = None
 
     def is_over(self, card):
@@ -91,14 +93,16 @@ class App(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("Drag and Drop Cards")
+        self.title("JRobotics Racing")
         self.geometry(f"{5 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
+        self.configure(bg=BG_COLOR)  # Set the window background color
+
         self.cards_x = 10
         self.cards_y = 10
         self.slots_x = 10
         self.slots_y = CARD_HEIGHT + 20
-        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge", width=CARD_WIDTH//10, height=CARD_HEIGHT//20) for i in range(5)]
-        self.slots = [Slot(self, borderwidth=2, relief="sunken", width=CARD_WIDTH//10, height=CARD_HEIGHT//20) for _ in range(5)]
+        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(5)]
+        self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
 
         for i, card in enumerate(self.cards):
             card.place(x=self.cards_x + i * CARD_WIDTH, y=self.cards_y)
@@ -106,10 +110,14 @@ class App(tk.Tk):
         for i, slot in enumerate(self.slots):
             slot.place(x=self.slots_x + i * CARD_WIDTH, y=self.slots_y)
 
-        self.redraw_button = tk.Button(self, text="Redraw", command=self.redraw)
+        button_font = ("Arial", 20)  # Adjust the font size as needed
+        button_width = 20  # Adjust the width as needed
+        button_height = 2  # Adjust the height as needed
+
+        self.redraw_button = tk.Button(self, text="Redraw", command=self.redraw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.redraw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
-        self.execute_button = tk.Button(self, text="Execute", command=self.execute)
+        self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.execute_button.place(x=3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.redraw()
@@ -121,12 +129,11 @@ class App(tk.Tk):
 
 
     def execute(self):
-        if any(slot.card is None for slot in self.slots):
-            messagebox.showerror("Error", "All slots must be filled to execute.")
-        else:
-            command = "".join([slot.card.cget("text") for slot in self.slots])
-            print("Command:", command)
-            self.ser.write((command).encode('utf-8'))
+        # Generate the command using only filled slots
+        command = "".join([slot.card.code for slot in self.slots if slot.card is not None])
+
+        print("Command:", command)
+        self.ser.write(command.encode('utf-8'))
 
 if __name__ == "__main__":
     app = App()

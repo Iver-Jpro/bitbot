@@ -59,9 +59,14 @@ class Card(tk.Label):
                 self.place(x=slot.winfo_x(), y=slot.winfo_y())
                 self.lift()
                 return
+        # If the card is not placed over any slot, reset its previous slot (if any)
+        if self.slot:
+            self.slot.card = None
+            self.slot = None
         self.place(x=self.original_x, y=self.original_y)
 
     def reset(self, label):
+        self.code= label
         self.load_image(label)
         self.config(image=self.display_image)
         self.place(x=self.original_x, y=self.original_y)
@@ -104,9 +109,6 @@ class App(tk.Tk):
         self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(5)]
         self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
 
-        for i, card in enumerate(self.cards):
-            card.place(x=self.cards_x + i * CARD_WIDTH, y=self.cards_y)
-
         for i, slot in enumerate(self.slots):
             slot.place(x=self.slots_x + i * CARD_WIDTH, y=self.slots_y)
 
@@ -114,18 +116,23 @@ class App(tk.Tk):
         button_width = 20  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
-        self.redraw_button = tk.Button(self, text="Redraw", command=self.redraw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
+        self.redraw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.redraw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.execute_button.place(x=3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
-        self.redraw()
-    def redraw(self):
+    def draw(self):
         labels = ["U"] + [random.choice("LRF") for _ in range(4)]
         random.shuffle(labels)
         for card, label in zip(self.cards, labels):
             card.reset(label)
+            # Place the card if it hasn't been placed yet
+            if not card.winfo_ismapped():
+                card.place(x=self.cards_x + card.index * CARD_WIDTH, y=self.cards_y)
+
+        for slot in self.slots:
+            slot.card = None
 
 
     def execute(self):

@@ -5,6 +5,8 @@ import serial
 
 from PIL import Image, ImageTk
 
+ROUND_TIME = 30
+
 BG_COLOR = '#FFE1B7'
 
 CARD_WIDTH = 400
@@ -116,11 +118,22 @@ class App(tk.Tk):
         button_width = 20  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
-        self.redraw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.redraw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
+        self.draw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.execute_button.place(x=3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+
+        # Disable the "Execute" button when the app starts up
+        self.execute_button.config(state=tk.DISABLED)
+
+        # Timer label
+        self.remaining_time = tk.IntVar(value=ROUND_TIME)
+        self.timer_label = tk.Label(self, textvariable=self.remaining_time, font=("Arial", 20), bg=BG_COLOR)
+        self.timer_label.place(x=CARD_WIDTH, y=2 * CARD_HEIGHT)
+
+        # Timer state
+        self.timer_running = False
 
     def draw(self):
         labels = ["U"] + [random.choice("LRF") for _ in range(4)]
@@ -134,13 +147,34 @@ class App(tk.Tk):
         for slot in self.slots:
             slot.card = None
 
+        self.execute_button.config(state=tk.NORMAL)
+
+        self.remaining_time.set(ROUND_TIME)
+        self.timer_running = True
+        self.update_timer()
+
+        self.draw_button.config(state=tk.DISABLED)
+
+    def update_timer(self):
+        if self.timer_running:
+            current_time = self.remaining_time.get()
+            if current_time > 0:
+                self.remaining_time.set(current_time - 1)
+                # Call this function again after 1000ms (1 second)
+                self.after(1000, self.update_timer)
+            else:
+                self.execute()
+
 
     def execute(self):
+        self.execute_button.config(state=tk.DISABLED)
+
         # Generate the command using only filled slots
         command = "".join([slot.card.code for slot in self.slots if slot.card is not None])
-
+        self.timer_running = False
         print("Command:", command)
-        self.ser.write(command.encode('utf-8'))
+        #self.ser.write(command.encode('utf-8'))
+        self.draw_button.config(state=tk.NORMAL)
 
 if __name__ == "__main__":
     app = App()

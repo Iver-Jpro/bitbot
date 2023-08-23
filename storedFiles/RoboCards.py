@@ -200,6 +200,14 @@ class App(tk.Tk):
         self.score_label = tk.Label(self, textvariable=self.score_text, font=ARCADE_FONT, bg=BG_COLOR)
         self.score_label.place(x=4 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
+        # Create a label for the "GAME OVER" text
+        self.game_over_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=("Press Start 2P", 50), fg="red", bg='blue')
+        self.game_over_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.game_over_label.lower()  # Send it to the back initially
+
+        # Initially, don't allow the click event to hide the text
+        self.allow_hide = False
+
     def update_score_display(self):
         """Update the score display."""
         self.score_text.set(f"Score: {self.score}")
@@ -248,6 +256,26 @@ class App(tk.Tk):
 
         thread = threading.Thread(target=self.listenToTheRadio)
         thread.start()
+    def display_game_over(self):
+        """Display the 'GAME OVER' text."""
+        self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
+        self.game_over_label.lift()  # Bring the canvas to the front
+        self.after(5000, self.enable_hide)  # After 5 seconds, allow the click event to hide the text
+        self.game_over_label.bind("<Button-1>", self.hide_game_over)  # Bind the click event
+
+        self.draw_button.config(state=tk.DISABLED)
+
+    def enable_hide(self):
+        """Allow the 'GAME OVER' text to be hidden."""
+        self.allow_hide = True
+
+    def hide_game_over(self, event):
+        """Hide the 'GAME OVER' text."""
+        if self.allow_hide:
+            tk.Misc.lower(self.game_over_label, self.canvas)  # Send the canvas to the back
+        self.draw_button.config(state=tk.NORMAL)
+        self.score = 0
+        self.update_score_display()
 
     def listenToTheRadio(self):
         global gameboard
@@ -271,13 +299,17 @@ class App(tk.Tk):
                         self.after(0, self.update_score_display)
                     else:
                         print("you did not parse correctly")
+
+                    self.after(0, self.display_game_over())
                     break
+
                 else:
                     rfid = int(message)
                     if gameboard.get(rfid) != None:
                         print("Found gameboard position")
                         self.score += gameboard.get(rfid).points
                         self.after(0, self.update_score_display)
+
 
 
 if __name__ == "__main__":

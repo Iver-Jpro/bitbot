@@ -3,18 +3,38 @@ import tkinter.messagebox as messagebox
 import random
 import serial
 
+from PIL import Image, ImageTk
 
+CARD_WIDTH = 400
+CARD_HEIGHT = 400
 
 class Card(tk.Label):
     def __init__(self, parent, index, **kwargs):
-        super().__init__(parent, text=random.choice("LRFU"), **kwargs)
+
+        # self.image = tk.PhotoImage(file=f"C:\\dev\\linerider\\storedFiles\\roborally {random.choice('LRFU')}.png")
+        # # Calculate the subsample factors based on the image size and card size
+        # x_factor = self.image.width() // CARD_WIDTH
+        # y_factor = self.image.height() // CARD_HEIGHT
+        # self.display_image = self.image.subsample(x_factor, y_factor)
+
+        self.load_image(random.choice('LRFU'))
+        super().__init__(parent, image=self.display_image, borderwidth=2, relief="ridge")
+
         self.index = index
-        self.original_x = self.master.cards_x + index * 60
+        self.original_x = self.master.cards_x + index * CARD_WIDTH
         self.original_y = self.master.cards_y
         self.bind("<ButtonPress-1>", self.on_press)
         self.bind("<B1-Motion>", self.on_drag)
         self.bind("<ButtonRelease-1>", self.on_release)
         self.slot = None
+
+    def load_image(self, label):
+        self.image = tk.PhotoImage(file=f"C:\\dev\\linerider\\storedFiles\\roborally {label}.png")
+        # Calculate the subsample factors based on the image size and card size
+        x_factor = self.image.width() // round(CARD_WIDTH/1.5)
+        y_factor = self.image.height() // round(CARD_HEIGHT/1.5)
+        self.display_image = self.image.subsample(x_factor, y_factor)
+
 
     def on_press(self, event):
         self.x = event.x
@@ -45,9 +65,10 @@ class Card(tk.Label):
         self.place(x=self.original_x, y=self.original_y)
 
     def reset(self, label):
+        self.load_image(label)
+        self.config(image=self.display_image)
         self.place(x=self.original_x, y=self.original_y)
         self.slot = None
-        self.config(text=label)
         self.lift()
 
 
@@ -71,24 +92,27 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Drag and Drop Cards")
-        self.geometry("1400x1200")
+        self.geometry(f"{5 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
         self.cards_x = 10
         self.cards_y = 10
         self.slots_x = 10
-        self.slots_y = 100
-        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge", width=5, height=2) for i in range(5)]
-        self.slots = [Slot(self, borderwidth=2, relief="sunken", width=5, height=2) for _ in range(5)]
-        self.redraw_button = tk.Button(self, text="Redraw", command=self.redraw)
-        self.redraw_button.place(x=180, y=150)
+        self.slots_y = CARD_HEIGHT + 20
+        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge", width=CARD_WIDTH//10, height=CARD_HEIGHT//20) for i in range(5)]
+        self.slots = [Slot(self, borderwidth=2, relief="sunken", width=CARD_WIDTH//10, height=CARD_HEIGHT//20) for _ in range(5)]
+
+        for i, card in enumerate(self.cards):
+            card.place(x=self.cards_x + i * CARD_WIDTH, y=self.cards_y)
 
         for i, slot in enumerate(self.slots):
-            slot.place(x=self.slots_x + i * 60, y=self.slots_y)
+            slot.place(x=self.slots_x + i * CARD_WIDTH, y=self.slots_y)
+
+        self.redraw_button = tk.Button(self, text="Redraw", command=self.redraw)
+        self.redraw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute)
-        self.execute_button.place(x=250, y=150)
+        self.execute_button.place(x=3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.redraw()
-
     def redraw(self):
         labels = ["U"] + [random.choice("LRF") for _ in range(4)]
         random.shuffle(labels)

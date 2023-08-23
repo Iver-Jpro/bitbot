@@ -12,6 +12,47 @@ BG_COLOR = '#FFE1B7'
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
+
+
+
+class Nexus():
+    xPosition = ""
+    yPosition = ""
+    points = 0
+
+    def __init__(self, x, y, points):
+        self.xPosition = x
+        self.yPosition = y
+        self.points = points
+
+gameboard = {
+    1944688892: Nexus("A","1",0),
+    2214546422: Nexus("A","2",0),
+    3287137276: Nexus("A","3",0),
+    871609077: Nexus("A","4",0),
+    4081897461: Nexus("A","5",0),
+    3004060668: Nexus("B","1",0),
+    1944446709: Nexus("B","2",0),
+    1676494582: Nexus("B","3",0),
+    329147126: Nexus("B","4",0),
+    3543034358: Nexus("B","5",0),
+    601800188: Nexus("C","1",0),
+    864110588: Nexus("C","2",0),
+    3010023420: Nexus("C","3",0),
+    2481922550: Nexus("C","4",0),
+    2735262972: Nexus("C","5",0),
+    3813451004: Nexus("D","1",0),
+    3019725814: Nexus("D","2",0),
+    1667070454: Nexus("D","3",0),
+    868100604: Nexus("D","4",0),
+    3278031868: Nexus("D","5",0),
+    869677308: Nexus("E","1",0),
+    3279192572: Nexus("E","2",0),
+    2212260348: Nexus("E","3",0),
+    1945225468: Nexus("E","4",0),
+    1664226294: Nexus("E","5",0)
+}
+
 class Card(tk.Label):
     def __init__(self, parent, index, **kwargs):
 
@@ -173,7 +214,7 @@ class App(tk.Tk):
         command = "".join([slot.card.code for slot in self.slots if slot.card is not None])
         self.timer_running = False
         print("Command:", command)
-        #self.ser.write(command.encode('utf-8'))
+        self.ser.write(command.encode('utf-8'))
         self.draw_button.config(state=tk.NORMAL)
 
 if __name__ == "__main__":

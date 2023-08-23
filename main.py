@@ -207,7 +207,7 @@ class PN532:
 
                         if response != globals.mostRecentTag:
                             #send the tag to the server
-                            radio.send(str(response)+"\n")
+                            radio.send(str(response))#newline?
                             drive.stop()  # stop the robot and load the next command
 
                         globals.mostRecentTag = response
@@ -295,7 +295,6 @@ class Drive:
 
     def turnLeft(self):
         if self.state == DriveState.READY:
-            radio.send("L\n")
             if self.getLinesensorStatus() & self.LEFT_LF:
                 self.linesPassed = 0
                 self.isOnLine = True
@@ -313,11 +312,6 @@ class Drive:
         if status & direction and running_time() - self.startedTurning > self.EXPECTED_TURN_TIME:
             self.adjustMotors(self.TORQUE, self.TORQUE)
             self.state = DriveState.FORWARD
-            if(direction== self.LEFT_LF):
-                dircode="L"
-            else:
-                dircode="R"
-            radio.send(dircode+": " + str(running_time() - self.startedTurning))
 
     def turnRight(self):
         if self.state == DriveState.READY:
@@ -335,7 +329,6 @@ class Drive:
 
     def turn180(self):
         if self.state == DriveState.READY:
-            radio.send("U\n")
             self.startedTurning = running_time()
             if self.getLinesensorStatus() & self.LEFT_LF:
                 self.linesPassed = 0
@@ -436,7 +429,7 @@ def commandsDownload(globals):
 def endRun(globals, drive):
     setLEDs(globals.fireleds, 1.0, 0, 0, 0.5)
     drive.stop()
-    #radio.send(str(globals.points))
+    radio.send(str("RUN_END"))
 
 
 globals = Globals()

@@ -1,18 +1,15 @@
-import tkinter as tk
-import tkinter.messagebox as messagebox
 import random
+import tkinter as tk
+import threading
 import serial
-
-from PIL import Image, ImageTk
 
 ROUND_TIME = 30
 
 BG_COLOR = '#FFE1B7'
+ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
 
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
-
-
 
 
 class Nexus():
@@ -25,38 +22,40 @@ class Nexus():
         self.yPosition = y
         self.points = points
 
+
 gameboard = {
-    1944688892: Nexus("A","1",0),
-    2214546422: Nexus("A","2",0),
-    3287137276: Nexus("A","3",0),
-    871609077: Nexus("A","4",0),
-    4081897461: Nexus("A","5",0),
-    3004060668: Nexus("B","1",0),
-    1944446709: Nexus("B","2",0),
-    1676494582: Nexus("B","3",0),
-    329147126: Nexus("B","4",0),
-    3543034358: Nexus("B","5",0),
-    601800188: Nexus("C","1",0),
-    864110588: Nexus("C","2",0),
-    3010023420: Nexus("C","3",0),
-    2481922550: Nexus("C","4",0),
-    2735262972: Nexus("C","5",0),
-    3813451004: Nexus("D","1",0),
-    3019725814: Nexus("D","2",0),
-    1667070454: Nexus("D","3",0),
-    868100604: Nexus("D","4",0),
-    3278031868: Nexus("D","5",0),
-    869677308: Nexus("E","1",0),
-    3279192572: Nexus("E","2",0),
-    2212260348: Nexus("E","3",0),
-    1945225468: Nexus("E","4",0),
-    1664226294: Nexus("E","5",0)
+    1944688892: Nexus("A", "1", 1),
+    2214546422: Nexus("A", "2", 1),
+    3287137276: Nexus("A", "3", 1),
+    871609077: Nexus("A", "4", 1),
+    4081897461: Nexus("A", "5", 1),
+    3004060668: Nexus("B", "1", 1),
+    1944446709: Nexus("B", "2", 1),
+    1676494582: Nexus("B", "3", 1),
+    329147126: Nexus("B", "4", 1),
+    3543034358: Nexus("B", "5", 1),
+    601800188: Nexus("C", "1", 1),
+    864110588: Nexus("C", "2", 1),
+    3010023420: Nexus("C", "3", 1),
+    2481922550: Nexus("C", "4", 1),
+    2735262972: Nexus("C", "5", 1),
+    3813451004: Nexus("D", "1", 1),
+    3019725814: Nexus("D", "2", 1),
+    1667070454: Nexus("D", "3", 1),
+    868100604: Nexus("D", "4", 1),
+    3278031868: Nexus("D", "5", 1),
+    869677308: Nexus("E", "1", 1),
+    3279192572: Nexus("E", "2", 1),
+    2212260348: Nexus("E", "3", 1),
+    1945225468: Nexus("E", "4", 1),
+    1664226294: Nexus("E", "5", 1)
 }
+
 
 class Card(tk.Label):
     def __init__(self, parent, index, **kwargs):
 
-        self.code= random.choice('LRFU')
+        self.code = random.choice('LRFU')
         self.load_image(self.code)
         super().__init__(parent, image=self.display_image, borderwidth=2, relief="ridge")
 
@@ -71,10 +70,9 @@ class Card(tk.Label):
     def load_image(self, label):
         self.image = tk.PhotoImage(file=f"C:\\dev\\linerider\\storedFiles\\roborally {label}.png")
         # Calculate the subsample factors based on the image size and card size
-        x_factor = self.image.width() // round(CARD_WIDTH/1.5)
-        y_factor = self.image.height() // round(CARD_HEIGHT/1.5)
+        x_factor = self.image.width() // round(CARD_WIDTH / 1.5)
+        y_factor = self.image.height() // round(CARD_HEIGHT / 1.5)
         self.display_image = self.image.subsample(x_factor, y_factor)
-
 
     def on_press(self, event):
         self.x = event.x
@@ -109,7 +107,7 @@ class Card(tk.Label):
         self.place(x=self.original_x, y=self.original_y)
 
     def reset(self, label):
-        self.code= label
+        self.code = label
         self.load_image(label)
         self.config(image=self.display_image)
         self.place(x=self.original_x, y=self.original_y)
@@ -117,12 +115,11 @@ class Card(tk.Label):
         self.lift()
 
 
-
 class Slot(tk.Label):
     def __init__(self, parent, **kwargs):
         self.bg_image = tk.PhotoImage(file="C:\\dev\\linerider\\storedFiles\\roborally background.png")
-        x_factor = self.bg_image.width() // round(CARD_WIDTH/1.5)
-        y_factor = self.bg_image.height() // round(CARD_HEIGHT/1.5)
+        x_factor = self.bg_image.width() // round(CARD_WIDTH / 1.5)
+        y_factor = self.bg_image.height() // round(CARD_HEIGHT / 1.5)
         self.display_image = self.bg_image.subsample(x_factor, y_factor)
 
         super().__init__(parent, image=self.display_image)
@@ -134,8 +131,8 @@ class Slot(tk.Label):
         return self.winfo_x() < card_center_x < self.winfo_x() + self.winfo_width() and \
             self.winfo_y() < card_center_y < self.winfo_y() + self.winfo_height()
 
-class App(tk.Tk):
 
+class App(tk.Tk):
     ser = serial.Serial('COM5', 115200)  # Change 'COM3' to the appropriate COM port
     ser.timeout = 1
 
@@ -144,6 +141,21 @@ class App(tk.Tk):
         self.title("JRobotics Racing")
         self.geometry(f"{5 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
         self.configure(bg=BG_COLOR)  # Set the window background color
+
+        # Load the background image
+        self.bg_image = tk.PhotoImage(file="C:\\dev\\linerider\\storedFiles\\roborally BG2.png")
+
+        # Create a canvas for the background
+        self.canvas = tk.Canvas(self, width=self.winfo_screenwidth(), height=self.winfo_screenheight())
+        self.canvas.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ensure the canvas covers the entire window
+
+
+    # Tile the image on the canvas
+        for x in range(0, self.winfo_screenwidth(), self.bg_image.width()):
+            for y in range(0, self.winfo_screenheight(), self.bg_image.height()):
+                self.canvas.create_image(x, y, image=self.bg_image, anchor=tk.NW)
+
+
 
         self.cards_x = 10
         self.cards_y = 10
@@ -155,26 +167,42 @@ class App(tk.Tk):
         for i, slot in enumerate(self.slots):
             slot.place(x=self.slots_x + i * CARD_WIDTH, y=self.slots_y)
 
-        button_font = ("Arial", 20)  # Adjust the font size as needed
-        button_width = 20  # Adjust the width as needed
+        button_font = ARCADE_FONT  # Adjust the font size as needed
+        button_width = 15  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
         self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.draw_button.place(x=2 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.draw_button.place(x=1.3* CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.execute_button.place(x=3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.execute_button.place(x=2.7 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Disable the "Execute" button when the app starts up
         self.execute_button.config(state=tk.DISABLED)
 
         # Timer label
         self.remaining_time = tk.IntVar(value=ROUND_TIME)
-        self.timer_label = tk.Label(self, textvariable=self.remaining_time, font=("Arial", 20), bg=BG_COLOR)
-        self.timer_label.place(x=CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.timer_text = tk.StringVar(value=f"Time left: {ROUND_TIME}")
+        self.timer_label = tk.Label(self, textvariable=self.timer_text, font=ARCADE_FONT, bg=BG_COLOR)
+        self.timer_label.place(x=CARD_WIDTH/4, y=2 * CARD_HEIGHT)
 
         # Timer state
         self.timer_running = False
+
+        # Initialize the score
+        self.score = 0
+
+        # Create a StringVar to hold the score text
+        self.score_text = tk.StringVar()
+        self.update_score_display()
+
+        # Create a Label to display the score
+        self.score_label = tk.Label(self, textvariable=self.score_text, font=ARCADE_FONT, bg=BG_COLOR)
+        self.score_label.place(x=4 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+
+    def update_score_display(self):
+        """Update the score display."""
+        self.score_text.set(f"Score: {self.score}")
 
     def draw(self):
         labels = ["U"] + [random.choice("LRF") for _ in range(4)]
@@ -201,13 +229,14 @@ class App(tk.Tk):
             current_time = self.remaining_time.get()
             if current_time > 0:
                 self.remaining_time.set(current_time - 1)
+                self.timer_text.set(f"Time left: {current_time - 1}")
                 # Call this function again after 1000ms (1 second)
                 self.after(1000, self.update_timer)
             else:
                 self.execute()
 
-
     def execute(self):
+
         self.execute_button.config(state=tk.DISABLED)
 
         # Generate the command using only filled slots
@@ -216,6 +245,40 @@ class App(tk.Tk):
         print("Command:", command)
         self.ser.write(command.encode('utf-8'))
         self.draw_button.config(state=tk.NORMAL)
+
+        thread = threading.Thread(target=self.listenToTheRadio)
+        thread.start()
+
+    def listenToTheRadio(self):
+        global gameboard
+
+        while not self.timer_running:
+
+            if self.ser.in_waiting > 1:
+                print("reading " + str(self.ser.in_waiting) + " bytes")
+                message = self.ser.read(64).decode('utf-8')
+                print(message)
+
+                find = message.find("RUN_END")
+                if find > 1:
+                    print("final message:")
+                    print(message)
+
+                    final_rfid = int(message[0:find])
+                    if gameboard.get(final_rfid) != None:
+                        print("Found gameboard position")
+                        self.score += gameboard.get(final_rfid).points
+                        self.after(0, self.update_score_display)
+                    else:
+                        print("you did not parse correctly")
+                    break
+                else:
+                    rfid = int(message)
+                    if gameboard.get(rfid) != None:
+                        print("Found gameboard position")
+                        self.score += gameboard.get(rfid).points
+                        self.after(0, self.update_score_display)
+
 
 if __name__ == "__main__":
     app = App()

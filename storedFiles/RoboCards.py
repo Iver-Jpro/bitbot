@@ -28,27 +28,27 @@ class Nexus():
 
 gameboard = {
     1944688892: Nexus("A", "1", 1),
-    2214546422: Nexus("A", "2", 1),
-    3287137276: Nexus("A", "3", 1),
-    871609077: Nexus("A", "4", 1),
+    2214546422: Nexus("A", "2", 2),
+    3287137276: Nexus("A", "3", 3),
+    871609077: Nexus("A", "4", 0),
     4081897461: Nexus("A", "5", 1),
-    3004060668: Nexus("B", "1", 1),
+    3004060668: Nexus("B", "1", 2),
     1944446709: Nexus("B", "2", 1),
-    1676494582: Nexus("B", "3", 1),
+    1676494582: Nexus("B", "3", -2),
     329147126: Nexus("B", "4", 1),
-    3543034358: Nexus("B", "5", 1),
-    601800188: Nexus("C", "1", 1),
-    864110588: Nexus("C", "2", 1),
+    3543034358: Nexus("B", "5", 2),
+    601800188: Nexus("C", "1", -3),
+    864110588: Nexus("C", "2", 2),
     3010023420: Nexus("C", "3", 1),
-    2481922550: Nexus("C", "4", 1),
+    2481922550: Nexus("C", "4", 2),
     2735262972: Nexus("C", "5", 1),
     3813451004: Nexus("D", "1", 1),
     3019725814: Nexus("D", "2", 1),
     1667070454: Nexus("D", "3", 1),
-    868100604: Nexus("D", "4", 1),
-    3278031868: Nexus("D", "5", 1),
-    869677308: Nexus("E", "1", 1),
-    3279192572: Nexus("E", "2", 1),
+    868100604: Nexus("D", "4", 2),
+    3278031868: Nexus("D", "5", -1),
+    869677308: Nexus("E", "1", 6),
+    3279192572: Nexus("E", "2", 2),
     2212260348: Nexus("E", "3", 1),
     1945225468: Nexus("E", "4", 1),
     1664226294: Nexus("E", "5", 1)
@@ -141,6 +141,8 @@ class App(tk.Tk):
 
     def __init__(self):
         super().__init__()
+
+        self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
         self.geometry(f"{7 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
@@ -170,17 +172,17 @@ class App(tk.Tk):
         self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
 
         for i, slot in enumerate(self.slots):
-            slot.place(x=self.slots_x + i * CARD_WIDTH, y=self.slots_y)
+            slot.place(x=self.slots_x + i * CARD_WIDTH + CARD_WIDTH, y=self.slots_y)
 
         button_font = ARCADE_FONT  # Adjust the font size as needed
         button_width = 15  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
         self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.draw_button.place(x=1.3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.execute_button.place(x=2.7 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.execute_button.place(x=2.7 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Disable the "Execute" button when the app starts up
         self.execute_button.config(state=tk.DISABLED)
@@ -189,7 +191,7 @@ class App(tk.Tk):
         self.remaining_time = tk.IntVar(value=ROUND_TIME)
         self.timer_text = tk.StringVar(value=f"Time left: {ROUND_TIME}")
         self.timer_label = tk.Label(self, textvariable=self.timer_text, font=ARCADE_FONT, bg=BG_COLOR)
-        self.timer_label.place(x=CARD_WIDTH / 4, y=2 * CARD_HEIGHT)
+        self.timer_label.place(x=CARD_WIDTH / 4 + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Timer state
         self.timer_running = False
@@ -203,7 +205,7 @@ class App(tk.Tk):
 
         # Create a Label to display the score
         self.score_label = tk.Label(self, textvariable=self.score_text, font=ARCADE_FONT, bg=BG_COLOR)
-        self.score_label.place(x=4 * CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.score_label.place(x=4 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Create a label for the "GAME OVER" text
         self.game_over_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=("Press Start 2P", 50), fg="red", bg='blue')
@@ -279,22 +281,27 @@ class App(tk.Tk):
 
         # Generate the command using only filled slots
         cardlabels = "".join([slot.card.code for slot in self.slots if slot.card is not None])
-        command = cardlabels.replace("2", "FF").replace("3", "FFF")
+        if self.play_count == 0:
+            command = "S"
+        else:
+            command = ""
+        command = command + cardlabels.replace("2", "FF").replace("3", "FFF")
         self.timer_running = False
         print("Command:", command)
         self.ser.write(command.encode('utf-8'))
-        self.draw_button.config(state=tk.NORMAL)
+        # self.draw_button.config(state=tk.NORMAL)
 
         thread = threading.Thread(target=self.listenToTheRadio)
         thread.start()
 
-    def display_game_over(self):
+    def game_over(self):
         """Display the 'GAME OVER' text."""
         self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
         self.game_over_label.lift()  # Bring the canvas to the front
         self.after(5000, self.enable_hide)  # After 5 seconds, allow the click event to hide the text
         self.game_over_label.bind("<Button-1>", self.hide_game_over)  # Bind the click event
 
+        self.seen_cards = []
         self.draw_button.config(state=tk.DISABLED)
 
     def enable_hide(self):
@@ -320,25 +327,35 @@ class App(tk.Tk):
                 print(message)
 
                 find = message.find("RUN_END")
-                if find > 1:
-
-                    final_rfid = int(message[0:find])
-                    if gameboard.get(final_rfid) != None:
-                        self.score += gameboard.get(final_rfid).points
-                        self.after(0, self.update_score_display)
-                    else:
-                        print("you did not parse correctly")
+                if find >= 0:
+                    if find > 0:  # antar at det finnes en RFID før RUN_END
+                        final_rfid = int(message[0:find])
+                        if gameboard.get(final_rfid) != None:
+                            self.addPoints(final_rfid)
+                        else:
+                            print("you did not parse correctly")
                     self.play_count += 1
                     if (self.play_count >= 3):
-                        self.after(0, self.display_game_over())
+                        self.after(0, self.game_over())
                         self.play_count = 0
+                    else:
+                        # sjekk OFF_TAG
+                        if (message.find("OFF_TAG")) >= 0:
+                            print("CAR IS OFF TAG")
+                        self.after(0, self.draw_button.config(state=tk.NORMAL))
                     break
 
                 else:
                     rfid = int(message)
                     if gameboard.get(rfid) != None:
-                        self.score += gameboard.get(rfid).points
-                        self.after(0, self.update_score_display)
+                        self.addPoints(rfid)
+
+    def addPoints(self, rfid):
+        global gameboard
+        if rfid not in self.seen_cards:
+            self.seen_cards.append(rfid)
+            self.score += gameboard.get(rfid).points
+            self.after(0, self.update_score_display)
 
 
 if __name__ == "__main__":

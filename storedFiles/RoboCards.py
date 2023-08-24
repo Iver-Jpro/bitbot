@@ -143,7 +143,7 @@ class App(tk.Tk):
         super().__init__()
         self.play_count = 0
         self.title("JRobotics Racing")
-        self.geometry(f"{5 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
+        self.geometry(f"{7 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
         self.configure(bg=BG_COLOR)  # Set the window background color
 
         # Load the background image
@@ -162,7 +162,11 @@ class App(tk.Tk):
         self.cards_y = 10
         self.slots_x = 10
         self.slots_y = CARD_HEIGHT + 20
-        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(5)]
+        self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(7)]
+
+        # for i, card in enumerate(self.cards):
+        #     card.place(x=self.cards_x + i * (CARD_WIDTH + 10), y=self.cards_y)  # Adjusted the spacing
+
         self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
 
         for i, slot in enumerate(self.slots):
@@ -228,7 +232,7 @@ class App(tk.Tk):
             drawn_cards.append("U")
 
         # Fill the rest of the slots with the other card types
-        for _ in range(5 - len(drawn_cards)):
+        for _ in range(7 - len(drawn_cards)):
             drawn_cards.append(random.choice(card_types))
 
         # Shuffle the list to randomize the order

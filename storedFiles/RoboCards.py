@@ -1,6 +1,7 @@
 import random
-import tkinter as tk
 import threading
+import tkinter as tk
+
 import serial
 
 ROUND_TIME = 30
@@ -12,6 +13,7 @@ CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
 MAX_PLAYS = 3
+
 
 class Nexus():
     xPosition = ""
@@ -69,7 +71,7 @@ class Card(tk.Label):
         self.slot = None
 
     def load_image(self, label):
-        self.image = tk.PhotoImage(file=f"C:\\dev\\linerider\\storedFiles\\roborally {label}.png")
+        self.image = tk.PhotoImage(file=f"roborally {label}.png")
         # Calculate the subsample factors based on the image size and card size
         x_factor = self.image.width() // round(CARD_WIDTH / 1.5)
         y_factor = self.image.height() // round(CARD_HEIGHT / 1.5)
@@ -118,7 +120,7 @@ class Card(tk.Label):
 
 class Slot(tk.Label):
     def __init__(self, parent, **kwargs):
-        self.bg_image = tk.PhotoImage(file="C:\\dev\\linerider\\storedFiles\\roborally background.png")
+        self.bg_image = tk.PhotoImage(file="roborally background.png")
         x_factor = self.bg_image.width() // round(CARD_WIDTH / 1.5)
         y_factor = self.bg_image.height() // round(CARD_HEIGHT / 1.5)
         self.display_image = self.bg_image.subsample(x_factor, y_factor)
@@ -145,19 +147,16 @@ class App(tk.Tk):
         self.configure(bg=BG_COLOR)  # Set the window background color
 
         # Load the background image
-        self.bg_image = tk.PhotoImage(file="C:\\dev\\linerider\\storedFiles\\roborally BG2.png")
+        self.bg_image = tk.PhotoImage(file="roborally BG2.png")
 
         # Create a canvas for the background
         self.canvas = tk.Canvas(self, width=self.winfo_screenwidth(), height=self.winfo_screenheight())
         self.canvas.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ensure the canvas covers the entire window
 
-
-    # Tile the image on the canvas
+        # Tile the image on the canvas
         for x in range(0, self.winfo_screenwidth(), self.bg_image.width()):
             for y in range(0, self.winfo_screenheight(), self.bg_image.height()):
                 self.canvas.create_image(x, y, image=self.bg_image, anchor=tk.NW)
-
-
 
         self.cards_x = 10
         self.cards_y = 10
@@ -174,7 +173,7 @@ class App(tk.Tk):
         button_height = 2  # Adjust the height as needed
 
         self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.draw_button.place(x=1.3* CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.draw_button.place(x=1.3 * CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.execute_button.place(x=2.7 * CARD_WIDTH, y=2 * CARD_HEIGHT)
@@ -186,7 +185,7 @@ class App(tk.Tk):
         self.remaining_time = tk.IntVar(value=ROUND_TIME)
         self.timer_text = tk.StringVar(value=f"Time left: {ROUND_TIME}")
         self.timer_label = tk.Label(self, textvariable=self.timer_text, font=ARCADE_FONT, bg=BG_COLOR)
-        self.timer_label.place(x=CARD_WIDTH/4, y=2 * CARD_HEIGHT)
+        self.timer_label.place(x=CARD_WIDTH / 4, y=2 * CARD_HEIGHT)
 
         # Timer state
         self.timer_running = False
@@ -214,9 +213,34 @@ class App(tk.Tk):
         """Update the score display."""
         self.score_text.set(f"Score: {self.score}")
 
+    def draw_cards(self):
+        """Return a list of card labels for a new draw."""
+        # Possible card types
+        card_types = ["L", "R", "F"]
+
+        # Decide if we should draw a "2" or "3" card
+        special_cards = [None, "2", "3"]
+        drawn_special_card = random.choice(special_cards)
+        drawn_cards = [drawn_special_card] if drawn_special_card else []
+
+        # Decide if we should draw a "U" card
+        if random.choice([True, False]):
+            drawn_cards.append("U")
+
+        # Fill the rest of the slots with the other card types
+        for _ in range(5 - len(drawn_cards)):
+            drawn_cards.append(random.choice(card_types))
+
+        # Shuffle the list to randomize the order
+        random.shuffle(drawn_cards)
+
+        return drawn_cards
+
     def draw(self):
-        labels = ["U"] + [random.choice("LRF") for _ in range(4)]
-        random.shuffle(labels)
+        """Draw new cards."""
+        labels = self.draw_cards()
+        for card, label in zip(self.cards, labels):
+            card.reset(label)
         for card, label in zip(self.cards, labels):
             card.reset(label)
             # Place the card if it hasn't been placed yet
@@ -250,7 +274,8 @@ class App(tk.Tk):
         self.execute_button.config(state=tk.DISABLED)
 
         # Generate the command using only filled slots
-        command = "".join([slot.card.code for slot in self.slots if slot.card is not None])
+        cardlabels = "".join([slot.card.code for slot in self.slots if slot.card is not None])
+        command = cardlabels.replace("2", "FF").replace("3", "FFF")
         self.timer_running = False
         print("Command:", command)
         self.ser.write(command.encode('utf-8'))
@@ -258,6 +283,7 @@ class App(tk.Tk):
 
         thread = threading.Thread(target=self.listenToTheRadio)
         thread.start()
+
     def display_game_over(self):
         """Display the 'GAME OVER' text."""
         self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
@@ -299,7 +325,7 @@ class App(tk.Tk):
                     else:
                         print("you did not parse correctly")
                     self.play_count += 1
-                    if(self.play_count >= 3):
+                    if (self.play_count >= 3):
                         self.after(0, self.display_game_over())
                         self.play_count = 0
                     break
@@ -309,7 +335,6 @@ class App(tk.Tk):
                     if gameboard.get(rfid) != None:
                         self.score += gameboard.get(rfid).points
                         self.after(0, self.update_score_display)
-
 
 
 if __name__ == "__main__":

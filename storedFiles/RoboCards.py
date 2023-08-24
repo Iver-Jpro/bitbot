@@ -323,32 +323,38 @@ class App(tk.Tk):
 
             if self.ser.in_waiting > 1:
 
-                message = self.ser.read(64).decode('utf-8')
-                print(message)
+                usbMessage = self.ser.read(64).decode('utf-8').rstrip()
 
-                find = message.find("RUN_END")
-                if find >= 0:
-                    if find > 0:  # antar at det finnes en RFID før RUN_END
-                        final_rfid = int(message[0:find])
-                        if gameboard.get(final_rfid) != None:
-                            self.addPoints(final_rfid)
+                print(usbMessage)
+                messages = usbMessage.split("\n")
+                messages.sort()
+
+                for message in messages:
+                    print(message)
+
+                    find = message.find("RUN_END")
+                    if find >= 0:
+
+                        self.play_count += 1
+                        if (self.play_count >= 3):
+                            self.after(0, self.game_over())
+                            self.play_count = 0
                         else:
-                            print("you did not parse correctly")
-                    self.play_count += 1
-                    if (self.play_count >= 3):
-                        self.after(0, self.game_over())
-                        self.play_count = 0
-                    else:
-                        # sjekk OFF_TAG
-                        if (message.find("OFF_TAG")) >= 0:
-                            print("CAR IS OFF TAG")
-                        self.after(0, self.draw_button.config(state=tk.NORMAL))
-                    break
+                            # sjekk OFF_TAG
+                            if (message.find("OFF_TAG")) >= 0:
+                                print("CAR IS OFF TAG")
 
-                else:
-                    rfid = int(message)
-                    if gameboard.get(rfid) != None:
-                        self.addPoints(rfid)
+                        self.after(0, self.draw_button.config(state=tk.NORMAL))
+                        return # break out of the loop
+
+                    else:
+                        try:
+                            rfid = int(message)
+                            if gameboard.get(rfid) != None:
+                                self.addPoints(rfid)
+                        except ValueError:
+                            print("Not a number" + message)
+
 
     def addPoints(self, rfid):
         global gameboard

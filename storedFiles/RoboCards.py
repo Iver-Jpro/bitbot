@@ -4,6 +4,8 @@ import tkinter as tk
 
 import serial
 
+from PIL import Image, ImageTk
+
 ROUND_TIME = 30
 
 BG_COLOR = '#FFE1B7'
@@ -145,7 +147,7 @@ class App(tk.Tk):
         self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
-        self.geometry(f"{7 * CARD_WIDTH + 100}x{2 * CARD_HEIGHT + 100}")
+        self.geometry(f"{7 * CARD_WIDTH + 100}x{5 * CARD_HEIGHT }")
         self.configure(bg=BG_COLOR)  # Set the window background color
 
         # Load the background image
@@ -179,7 +181,8 @@ class App(tk.Tk):
         button_height = 2  # Adjust the height as needed
 
         self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
-        self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
+        drawbuttonY = 2 * CARD_HEIGHT
+        self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=drawbuttonY)
 
         self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
         self.execute_button.place(x=2.7 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
@@ -214,6 +217,19 @@ class App(tk.Tk):
 
         # Initially, don't allow the click event to hide the text
         self.allow_hide = False
+
+        # Load and scale the 6x6-grid image
+        grid_image = Image.open("6x6-grid2.png")
+        print("imagemode:" + grid_image.mode)
+        grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
+        self.grid_photo = ImageTk.PhotoImage(grid_image)
+
+        self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
+        # Create a label for the grid image and place it below the Draw button
+        #grid_label = tk.Label(self, image=self.grid_photo)
+
+        #grid_label.place(x=CARD_WIDTH, y = drawbuttonY+100)
+
 
     def update_score_display(self):
         """Update the score display."""

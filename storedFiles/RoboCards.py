@@ -29,31 +29,31 @@ class Nexus():
 
 
 gameboard = {
-    1944688892: Nexus("A", "1", 1),
-    2214546422: Nexus("A", "2", 2),
-    3287137276: Nexus("A", "3", 3),
-    871609077: Nexus("A", "4", 0),
-    4081897461: Nexus("A", "5", 1),
-    3004060668: Nexus("B", "1", 2),
-    1944446709: Nexus("B", "2", 1),
-    1676494582: Nexus("B", "3", -2),
-    329147126: Nexus("B", "4", 1),
-    3543034358: Nexus("B", "5", 2),
-    601800188: Nexus("C", "1", -3),
-    864110588: Nexus("C", "2", 2),
-    3010023420: Nexus("C", "3", 1),
-    2481922550: Nexus("C", "4", 2),
-    2735262972: Nexus("C", "5", 1),
-    3813451004: Nexus("D", "1", 1),
-    3019725814: Nexus("D", "2", 1),
-    1667070454: Nexus("D", "3", 1),
-    868100604: Nexus("D", "4", 2),
-    3278031868: Nexus("D", "5", -1),
-    869677308: Nexus("E", "1", 6),
-    3279192572: Nexus("E", "2", 2),
-    2212260348: Nexus("E", "3", 1),
-    1945225468: Nexus("E", "4", 1),
-    1664226294: Nexus("E", "5", 1)
+    1944688892: Nexus("A", 1, 1),
+    2214546422: Nexus("A", 2, 2),
+    3287137276: Nexus("A", 3, 3),
+    871609077: Nexus("A", 4, 0),
+    4081897461: Nexus("A", 5, 1),
+    3004060668: Nexus("B", 1, 2),
+    1944446709: Nexus("B", 2, 1),
+    1676494582: Nexus("B", 3, -2),
+    329147126: Nexus("B", 4, 1),
+    3543034358: Nexus("B", 5, 2),
+    601800188: Nexus("C", 1, -3),
+    864110588: Nexus("C", 2, 2),
+    3010023420: Nexus("C", 3, 1),
+    2481922550: Nexus("C", 4, 2),
+    2735262972: Nexus("C", 5, 1),
+    3813451004: Nexus("D", 1, 1),
+    3019725814: Nexus("D", 2, 1),
+    1667070454: Nexus("D", 3, 1),
+    868100604: Nexus("D", 4, 2),
+    3278031868: Nexus("D", 5, -1),
+    869677308: Nexus("E", 1, 6),
+    3279192572: Nexus("E", 2, 2),
+    2212260348: Nexus("E", 3, 1),
+    1945225468: Nexus("E", 4, 1),
+    1664226294: Nexus("E", 5, 1)
 }
 
 
@@ -136,54 +136,49 @@ class Slot(tk.Label):
         return self.winfo_x() < card_center_x < self.winfo_x() + self.winfo_width() and \
             self.winfo_y() < card_center_y < self.winfo_y() + self.winfo_height()
 
+
 class GridWithPoint():
-    def __init__(self, canvas, x_position, y_position, grid_image_path, point_image_path):
-        self.canvas = canvas
+    def __init__(self, parent, x_position, y_position, grid_image_path, point_image_path):
+        self.grid_height = CARD_HEIGHT * 2
+        self.grid_width = CARD_WIDTH * 2
 
-        #grid_image = Image.open("6x6-grid2.png")
+        self.canvas = tk.Canvas(parent, width=self.grid_width, height=self.grid_height, bg="orange")
+        self.bg_image = tk.PhotoImage(file="circuit-bg.png")
+        self.canvas.create_image(0, 0, image=self.bg_image, anchor=tk.NW)
 
-        #grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
-        #self.grid_photo = ImageTk.PhotoImage(grid_image)
-
-        #self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
-        # Create a label for the grid image and place it below the Draw button
-        #grid_label = tk.Label(self, image=self.grid_photo)
-
-        #grid_label.place(x=CARD_WIDTH, y = drawbuttonY+100)
+        self.canvas.place(x=x_position, y=y_position)
 
         # Load and scale the grid image
         grid_image = Image.open(grid_image_path)
         grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
         self.grid_photo = ImageTk.PhotoImage(grid_image)
 
-        self.grid_height = CARD_HEIGHT * 2
-        self.grid_width = CARD_WIDTH * 2
-
         # Load the red point image
         point_image = Image.open(point_image_path)
-        print("imagemode P:" + point_image.mode)
+        point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
+
         self.point_photo = ImageTk.PhotoImage(point_image)
 
         # Create a label for the grid image
 
-        self.canvas.create_image(x_position, y_position, image=self.grid_photo, anchor=tk.NW)
-        self.canvas.pack()
-
-        # Create a label for the red point and place it initially at A1
-        #self.point_label = tk.Label(self.grid_canvas, image=self.point_photo, bg="white")
-        self.update_point('A', 1)
+        self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
 
     def update_point(self, x, y):
+        # Delete the previous red point
+        self.canvas.delete("point")
+
         # Convert A-E to numerical coordinates
-        x = ord(x.upper()) - ord('A')
+        x = ord(x.upper()) - ord('A') + 1
+        y = y + 1
 
         # Calculate the pixel position based on the grid size
-        point_x = (self.grid_width // 5) * x
+        point_x = (self.grid_width // 6) * x - CARD_WIDTH // 20
 
-        point_y = (self.grid_height // 5) * (y - 1)
+        point_y = (self.grid_height // 6) * (y - 1) - CARD_HEIGHT // 20
 
         # Update the red point position
-        #self.point_label.place(x=point_x, y=point_y)
+        self.canvas.create_image(point_x, point_y, image=self.point_photo, anchor=tk.NW, tags="point")
+
 
 class App(tk.Tk):
     ser = serial.Serial('COM5', 115200)  # Change 'COM3' to the appropriate COM port
@@ -195,7 +190,7 @@ class App(tk.Tk):
         self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
-        self.geometry(f"{7 * CARD_WIDTH + 100}x{5 * CARD_HEIGHT }")
+        self.geometry(f"{7 * CARD_WIDTH + 100}x{5 * CARD_HEIGHT}")
         self.configure(bg=BG_COLOR)  # Set the window background color
 
         # Load the background image
@@ -216,8 +211,6 @@ class App(tk.Tk):
         self.slots_y = CARD_HEIGHT + 20
         self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(7)]
 
-        # for i, card in enumerate(self.cards):
-        #     card.place(x=self.cards_x + i * (CARD_WIDTH + 10), y=self.cards_y)  # Adjusted the spacing
 
         self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
 
@@ -266,23 +259,8 @@ class App(tk.Tk):
         # Initially, don't allow the click event to hide the text
         self.allow_hide = False
 
-        # Load and scale the 6x6-grid image
-        #grid_image = Image.open("6x6-grid2.png")
-
-        #grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
-        #self.grid_photo = ImageTk.PhotoImage(grid_image)
-
-        #self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
-        # Create a label for the grid image and place it below the Draw button
-        #grid_label = tk.Label(self, image=self.grid_photo)
-
-        #grid_label.place(x=CARD_WIDTH, y = drawbuttonY+100)
-
-
         # Create an instance of GridWithPoint and place it below the Draw button
-        self.grid_with_point = GridWithPoint(self.canvas, CARD_WIDTH, drawbuttonY+100, "6x6-grid2.png", "redpoint.png")
-        #self.grid_with_point.place(x=CARD_WIDTH, y=drawbuttonY+100)
-
+        self.grid_with_point = GridWithPoint(self, CARD_WIDTH, drawbuttonY + 100, "6x6-grid3.png", "redpoint.png")
 
 
     def update_score_display(self):
@@ -415,7 +393,7 @@ class App(tk.Tk):
                                 print("CAR IS OFF TAG")
 
                         self.after(0, self.draw_button.config(state=tk.NORMAL))
-                        return # break out of the loop
+                        return  # break out of the loop
 
                     else:
                         try:
@@ -425,9 +403,12 @@ class App(tk.Tk):
                         except ValueError:
                             print("Not a number" + message)
 
-
     def addPoints(self, rfid):
         global gameboard
+
+        ps = gameboard.get(rfid)
+        self.grid_with_point.update_point(ps.xPosition, ps.yPosition)
+
         if rfid not in self.seen_cards:
             self.seen_cards.append(rfid)
             self.score += gameboard.get(rfid).points

@@ -10,22 +10,35 @@ class Globals:
         self.MAX_MSG_LENGTH = 251
 
         self.cards = {
-            1057905702: Card(1, True),
-            1893419794: Card(1, True),
-            329147126: Card(1, False),
-            866861814: Card(1, False),
-            1664779766: Card(1, False),
-            1676494582: Card(1, False),
-            1944446709: Card(1, False),
-            2205734389: Card(1, False),
-            2214546422: Card(1, False),
-            3543034358: Card(1, False),
-            3554901238: Card(1, False),
-            4081897461: Card(1, False),
+            1944688892: Card(1),
+            2214546422: Card(2),
+            3287137276: Card(3),
+            871609077: Card(0),
+            4081897461: Card(1),
+            3004060668: Card(2),
+            1944446709: Card(1),
+            1676494582: Card(-2),
+            329147126: Card(1),
+            3543034358: Card(2),
+            601800188: Card(-3),
+            864110588: Card(2),
+            3010023420: Card(1),
+            2481922550: Card(2),
+            2735262972: Card(1),
+            3813451004: Card(1),
+            3019725814: Card(1),
+            1667070454: Card(1),
+            868100604: Card(2),
+            3278031868: Card(-1),
+            869677308: Card(6),
+            3279192572: Card(2),
+            2212260348: Card(1),
+            1945225468: Card(1),
+            1664226294: Card(1)
         }
 
         self.gameTime = 20000
-        self.tagDisplayTime = 2000
+        self.tagDisplayTime = 500
 
         self.tags = set()
         self.mostRecentTag = 0
@@ -38,11 +51,12 @@ class Globals:
         self.points = 0
         self.runIsStarted = False
 
+        self.useCollisionDetection = True
+
 
 class Card:
-    def __init__(self, points, isStartPoint):
+    def __init__(self, points):
         self.points = points
-        self.isStartPoint = isStartPoint
 
 
 class RFIDCom:
@@ -206,8 +220,8 @@ class PN532:
                         globals.isOnTag = True
 
                         if response != globals.mostRecentTag:
-                            #send the tag to the server
-                            radio.send(str(response))#newline?
+                            # send the tag to the server
+                            radio.send(str(response))
                             drive.stop()  # stop the robot and load the next command
 
                         globals.mostRecentTag = response
@@ -252,10 +266,11 @@ class Drive:
 
     TORQUE = 400
     TURN_TORQUE = 250
+    SLOW_TURN_TORQUE = 0
     SLOW_TORQUE = 0
 
-    EXPECTED_TURN_TIME = 440 # ms
-    EXPECTED_U_TURN_TIME = 1000 # ms
+    EXPECTED_TURN_TIME = 440  # ms
+    EXPECTED_U_TURN_TIME = 1000  # ms
 
     linesPassed = 0
     startedTurning = 0
@@ -302,14 +317,17 @@ class Drive:
                 self.linesPassed = 1
                 self.isOnLine = False
             self.state = DriveState.TURNING_LEFT
-            self.adjustMotors(0, self.TURN_TORQUE)
+            self.adjustMotors(-self.SLOW_TURN_TORQUE, self.TURN_TORQUE)
             self.startedTurning = running_time()
         elif self.state == DriveState.TURNING_LEFT:
             self.keepTurning(self.LEFT_LF)
 
     def keepTurning(self, direction):
         status = self.getLinesensorStatus()
-        if status & direction and running_time() - self.startedTurning > self.EXPECTED_TURN_TIME:
+        if (
+                (status & direction)
+                and (running_time() - self.startedTurning) > self.EXPECTED_TURN_TIME
+        ):
             self.adjustMotors(self.TORQUE, self.TORQUE)
             self.state = DriveState.FORWARD
 
@@ -322,7 +340,7 @@ class Drive:
                 self.linesPassed = 1
                 self.isOnLine = False
             self.state = DriveState.TURNING_RIGHT
-            self.adjustMotors(self.TURN_TORQUE, 0)
+            self.adjustMotors(self.TURN_TORQUE, -self.SLOW_TURN_TORQUE)
             self.startedTurning = running_time()
         elif self.state == DriveState.TURNING_RIGHT:
             self.keepTurning(self.RIGHT_LF)
@@ -340,7 +358,10 @@ class Drive:
             self.state = DriveState.TURNING_AROUND
         elif self.state == DriveState.TURNING_AROUND:
             status = self.getLinesensorStatus()
-            if status & self.LEFT_LF and running_time() - self.startedTurning > self.EXPECTED_U_TURN_TIME:
+            if (
+                    status & self.LEFT_LF
+                    and running_time() - self.startedTurning > self.EXPECTED_U_TURN_TIME
+            ):
                 self.adjustMotors(self.TORQUE, self.TORQUE)
                 self.state = DriveState.FORWARD
 
@@ -361,7 +382,11 @@ class Drive:
                 return False
             command = globals.commands[0]
             globals.commands = globals.commands[1:]
-            if command == "L":
+            if command == "S":
+                globals.tags.clear()
+                globals.points = 0
+                display.scroll("0", wait=False, loop=True)
+            elif command == "L":
                 self.turnLeft()
             elif command == "R":
                 self.turnRight()
@@ -380,18 +405,18 @@ class Drive:
         return True
 
 
-def setLEDs(fireleds, r, g, b, brightness=1.0):
-    for pixel_id in range(0, 11):
-        fireleds[pixel_id] = (
+def setLEDs(fireleds, r, g, b, brightness=1.0, count=6):
+    for pixel_id in range(min(6, count)):
+        fireleds[pixel_id] = fireleds[pixel_id + 6] = (
             int(255.0 * r * brightness),
             int(255.0 * g * brightness),
-            int(255.0 * b * brightness),
+            int(255.0 * b * brightness)
         )
     fireleds.show()
 
 
-def initializeNextRun(globals):
-    globals.tags.clear()
+def initializeNextRun(globals, drive):
+    drive.stop()
     globals.mostRecentTag = 0
     globals.isOnTag = False
     globals.mostRecentTagTime = 0
@@ -403,36 +428,32 @@ def initializeNextRun(globals):
 
 def prepareForCommandsDownload(pn532, drive, globals):
     pn532.handleRFID(globals)
-    placed = globals.isOnTag #and drive.getLinesensorStatus() == 0x00
+    placed = globals.isOnTag
     if not placed:
         setLEDs(globals.fireleds, 1.0, 1.0, 0, 0.5)
-        return False
 
-    return globals.isOnTag
+    return placed
 
 
 def commandsDownload(globals):
-    if globals.points != 0:
-        globals.points = 0
-        display.scroll("0", wait=False, loop=True)
-
     globals.commands = radio.receive_bytes()
     if globals.commands is None or len(globals.commands) == 0:
         setLEDs(globals.fireleds, 0, 0, 1.0, 0.5)
         return False
 
-    #globals.commands = "F" + str(globals.commands, "utf8")  # Always start forward
-    globals.commands = "" + str(globals.commands, "utf8")
+    globals.commands = str(globals.commands, "utf8")
     return True
 
 
 def endRun(globals, drive):
-    setLEDs(globals.fireleds, 1.0, 0, 0, 0.5)
     drive.stop()
     radio.send(str("RUN_END"))
 
 
 globals = Globals()
+
+if button_a.is_pressed() or button_b.is_pressed():
+    globals.useCollisionDetection = False
 
 radio.config(length=globals.MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
 radio.on()
@@ -442,7 +463,7 @@ drive = Drive()
 
 
 while True:
-    initializeNextRun(globals)
+    initializeNextRun(globals, drive)
 
     while not prepareForCommandsDownload(pn532, drive, globals) or not commandsDownload(
             globals
@@ -458,6 +479,9 @@ while True:
             if runningTime >= (currentGameStartTime + globals.gameTime):
                 break
 
+            if globals.useCollisionDetection and pin1.read_digital() == 0:
+                break
+
             pn532.handleRFID(globals)
 
             if not drive.handleDrive(globals):
@@ -465,16 +489,25 @@ while True:
             if globals.mostRecentTagTime != 0 and runningTime <= (
                     globals.mostRecentTagTime + globals.tagDisplayTime
             ):
+                tagPoints = 0
+                if globals.mostRecentTag in globals.cards:
+                    tagPoints = globals.cards.get(globals.mostRecentTag).points
+
+                r = 0.0
+                g = 1.0
+                if tagPoints < 0:
+                    r = 1.0
+                    g = 0.0
+
                 setLEDs(
                     globals.fireleds,
-                    0,
-                    1.0,
+                    r,
+                    g,
                     0,
                     ((globals.mostRecentTagTime + globals.tagDisplayTime) - runningTime)
                     / globals.tagDisplayTime,
-                    )
+                    2 + abs(tagPoints)
+                )
     except (Exception):
         display.show(Image.SKULL)
     endRun(globals, drive)
-
-    sleep(5000)

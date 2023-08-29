@@ -136,6 +136,54 @@ class Slot(tk.Label):
         return self.winfo_x() < card_center_x < self.winfo_x() + self.winfo_width() and \
             self.winfo_y() < card_center_y < self.winfo_y() + self.winfo_height()
 
+class GridWithPoint():
+    def __init__(self, canvas, x_position, y_position, grid_image_path, point_image_path):
+        self.canvas = canvas
+
+        #grid_image = Image.open("6x6-grid2.png")
+
+        #grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
+        #self.grid_photo = ImageTk.PhotoImage(grid_image)
+
+        #self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
+        # Create a label for the grid image and place it below the Draw button
+        #grid_label = tk.Label(self, image=self.grid_photo)
+
+        #grid_label.place(x=CARD_WIDTH, y = drawbuttonY+100)
+
+        # Load and scale the grid image
+        grid_image = Image.open(grid_image_path)
+        grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
+        self.grid_photo = ImageTk.PhotoImage(grid_image)
+
+        self.grid_height = CARD_HEIGHT * 2
+        self.grid_width = CARD_WIDTH * 2
+
+        # Load the red point image
+        point_image = Image.open(point_image_path)
+        print("imagemode P:" + point_image.mode)
+        self.point_photo = ImageTk.PhotoImage(point_image)
+
+        # Create a label for the grid image
+
+        self.canvas.create_image(x_position, y_position, image=self.grid_photo, anchor=tk.NW)
+        self.canvas.pack()
+
+        # Create a label for the red point and place it initially at A1
+        #self.point_label = tk.Label(self.grid_canvas, image=self.point_photo, bg="white")
+        self.update_point('A', 1)
+
+    def update_point(self, x, y):
+        # Convert A-E to numerical coordinates
+        x = ord(x.upper()) - ord('A')
+
+        # Calculate the pixel position based on the grid size
+        point_x = (self.grid_width // 5) * x
+
+        point_y = (self.grid_height // 5) * (y - 1)
+
+        # Update the red point position
+        #self.point_label.place(x=point_x, y=point_y)
 
 class App(tk.Tk):
     ser = serial.Serial('COM5', 115200)  # Change 'COM3' to the appropriate COM port
@@ -219,16 +267,22 @@ class App(tk.Tk):
         self.allow_hide = False
 
         # Load and scale the 6x6-grid image
-        grid_image = Image.open("6x6-grid2.png")
-        print("imagemode:" + grid_image.mode)
-        grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
-        self.grid_photo = ImageTk.PhotoImage(grid_image)
+        #grid_image = Image.open("6x6-grid2.png")
 
-        self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
+        #grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
+        #self.grid_photo = ImageTk.PhotoImage(grid_image)
+
+        #self.canvas.create_image(CARD_WIDTH, drawbuttonY+100, image=self.grid_photo, anchor=tk.NW)
         # Create a label for the grid image and place it below the Draw button
         #grid_label = tk.Label(self, image=self.grid_photo)
 
         #grid_label.place(x=CARD_WIDTH, y = drawbuttonY+100)
+
+
+        # Create an instance of GridWithPoint and place it below the Draw button
+        self.grid_with_point = GridWithPoint(self.canvas, CARD_WIDTH, drawbuttonY+100, "6x6-grid2.png", "redpoint.png")
+        #self.grid_with_point.place(x=CARD_WIDTH, y=drawbuttonY+100)
+
 
 
     def update_score_display(self):

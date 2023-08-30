@@ -1,3 +1,4 @@
+import os
 import random
 import threading
 import tkinter as tk
@@ -154,19 +155,34 @@ class GridWithPoint():
         self.grid_photo = ImageTk.PhotoImage(grid_image)
 
         # Load the red point image
-        point_image = Image.open(point_image_path)
-        point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
+        # point_image = Image.open(point_image_path)
+        # point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
+        #
+        # self.point_photo = ImageTk.PhotoImage(point_image)
 
-        self.point_photo = ImageTk.PhotoImage(point_image)
+        # load the point images
+        point_values = {n.points for n in gameboard.values()}
+        self.point_images = {}
+        for point in point_values:
+            pngFilename = "point" + str(point) + ".png"
+            if not os.path.exists(pngFilename):
+                continue
+            point_image = Image.open(pngFilename)
+            point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
+            self.point_images[point] = ImageTk.PhotoImage(point_image)
 
         # Create a label for the grid image
 
         self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
 
-    def draw_point(self, x, y):
+    def draw_point(self, x, y, id):
+        points = gameboard[id].points
+
+        if points == 0:
+            return
 
         # Convert A-E to numerical coordinates
-        xPos = ord(x.upper()) - ord('A') + 1
+        xPos = 6-(ord(x.upper()) - ord('A') + 1)
         yPos = y + 1
 
         # Calculate the pixel position based on the grid size
@@ -177,7 +193,7 @@ class GridWithPoint():
         tag = "point" + str(x) + str(y)
 
         # Update the red point position
-        self.canvas.create_image(point_x, point_y, image=self.point_photo, anchor=tk.NW, tags=tag)
+        self.canvas.create_image(point_x, point_y, image=self.point_images[points], anchor=tk.NW, tags=tag)
 
     def remove_point(self, x, y):
         tag = "point" + str(x) + str(y)
@@ -263,7 +279,7 @@ class App(tk.Tk):
         self.allow_hide = False
 
         # Create an instance of GridWithPoint and place it below the Draw button
-        self.grid_with_point = GridWithPoint(self, CARD_WIDTH, drawbuttonY + 100, "6x6-grid3.png", "redpoint.png")
+        self.grid_with_point = GridWithPoint(self, CARD_WIDTH, drawbuttonY + 100, "6x6-grid3.png", "point1.png")
 
         self.place_points_markers()
 
@@ -364,7 +380,7 @@ class App(tk.Tk):
         self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
         self.game_over_label.lift()  # Bring the canvas to the front
         self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
-        self.canvas.bind("<Button-1>", self.hide_game_over)  # Bind the click event
+        self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
 
         self.play_count = 0
         self.seen_cards = []
@@ -437,7 +453,7 @@ class App(tk.Tk):
         global gameboard
 
         for rfid, ps in gameboard.items():
-            self.grid_with_point.draw_point(ps.xPosition, ps.yPosition)
+            self.grid_with_point.draw_point(ps.xPosition, ps.yPosition, rfid)
 
 
 if __name__ == "__main__":

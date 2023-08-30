@@ -163,22 +163,25 @@ class GridWithPoint():
 
         self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
 
-    def update_point(self, x, y):
-        # Delete the previous red point
-        self.canvas.delete("point")
+    def draw_point(self, x, y):
 
         # Convert A-E to numerical coordinates
-        x = ord(x.upper()) - ord('A') + 1
-        y = y + 1
+        xPos = ord(x.upper()) - ord('A') + 1
+        yPos = y + 1
 
         # Calculate the pixel position based on the grid size
-        point_x = (self.grid_width // 6) * x - CARD_WIDTH // 20
+        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20
+        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20
 
-        point_y = (self.grid_height // 6) * (y - 1) - CARD_HEIGHT // 20
+        # Encode the tag
+        tag = "point" + str(x) + str(y)
 
         # Update the red point position
-        self.canvas.create_image(point_x, point_y, image=self.point_photo, anchor=tk.NW, tags="point")
+        self.canvas.create_image(point_x, point_y, image=self.point_photo, anchor=tk.NW, tags=tag)
 
+    def remove_point(self, x, y):
+        tag = "point" + str(x) + str(y)
+        self.canvas.delete(tag)
 
 class App(tk.Tk):
     ser = serial.Serial('COM5', 115200)  # Change 'COM3' to the appropriate COM port
@@ -262,6 +265,7 @@ class App(tk.Tk):
         # Create an instance of GridWithPoint and place it below the Draw button
         self.grid_with_point = GridWithPoint(self, CARD_WIDTH, drawbuttonY + 100, "6x6-grid3.png", "redpoint.png")
 
+        self.place_points_markers()
 
     def update_score_display(self):
         """Update the score display."""
@@ -363,6 +367,7 @@ class App(tk.Tk):
         self.draw_button.config(state=tk.NORMAL)
         self.score = 0
         self.update_score_display()
+        self.place_points_markers()
 
     def listenToTheRadio(self):
         global gameboard
@@ -407,12 +412,19 @@ class App(tk.Tk):
         global gameboard
 
         ps = gameboard.get(rfid)
-        self.grid_with_point.update_point(ps.xPosition, ps.yPosition)
 
         if rfid not in self.seen_cards:
+            self.grid_with_point.remove_point(ps.xPosition, ps.yPosition)
+
             self.seen_cards.append(rfid)
             self.score += gameboard.get(rfid).points
             self.after(0, self.update_score_display)
+
+    def place_points_markers(self):
+        global gameboard
+
+        for rfid, ps in gameboard.items():
+            self.grid_with_point.draw_point(ps.xPosition, ps.yPosition)
 
 
 if __name__ == "__main__":

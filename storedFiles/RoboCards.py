@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 import threading
 import tkinter as tk
 
@@ -16,6 +17,20 @@ CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
 MAX_PLAYS = 3
+
+USB_PORT = 'COM5'
+
+# Iterate through command-line arguments to find an override for USB_PORT
+for i in range(1, len(sys.argv)):
+    if sys.argv[i] == '--usb_port':
+        try:
+            USB_PORT = sys.argv[i + 1]
+        except IndexError:
+            print("Error: --usb_port argument provided but no value given.")
+            sys.exit(1)
+        break
+
+print(f'Using USB Port: {USB_PORT}')
 
 
 class Nexus():
@@ -213,7 +228,7 @@ class GridWithPoint():
         self.canvas.delete(tag)
 
 class App(tk.Tk):
-    ser = serial.Serial('COM5', 115200)  # Change 'COM3' to the appropriate COM port
+    ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
     ser.timeout = 1
 
     def __init__(self):

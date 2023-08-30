@@ -16,6 +16,8 @@ ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
 
+SCALE = 1.0
+
 MAX_PLAYS = 3
 
 USB_PORT = 'COM5'
@@ -29,6 +31,15 @@ for i in range(1, len(sys.argv)):
             print("Error: --usb_port argument provided but no value given.")
             sys.exit(1)
         break
+    if sys.argv[i] == '--scale':
+        try:
+            SCALE = float(sys.argv[i + 1])
+            CARD_WIDTH = round(CARD_WIDTH * SCALE)
+            CARD_HEIGHT = round(CARD_HEIGHT * SCALE)
+            ARCADE_FONT = ("Press Start 2P", round(20*SCALE))
+        except IndexError:
+            print("Error: --scale argument provided but no value given.")
+            sys.exit(1)
 
 print(f'Using USB Port: {USB_PORT}')
 

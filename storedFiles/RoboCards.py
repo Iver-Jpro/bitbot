@@ -138,6 +138,8 @@ class Slot(tk.Label):
             self.winfo_y() < card_center_y < self.winfo_y() + self.winfo_height()
 
 
+
+
 class GridWithPoint():
     def __init__(self, parent, x_position, y_position, grid_image_path, point_image_path):
         self.grid_height = CARD_HEIGHT * 2
@@ -154,11 +156,11 @@ class GridWithPoint():
         grid_image = grid_image.resize((CARD_WIDTH * 2, CARD_HEIGHT * 2))
         self.grid_photo = ImageTk.PhotoImage(grid_image)
 
-        # Load the red point image
-        # point_image = Image.open(point_image_path)
-        # point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
-        #
-        # self.point_photo = ImageTk.PhotoImage(point_image)
+        # Load the robot image
+        robo_image = Image.open("clownbot.png")
+        robo_image = robo_image.resize((CARD_WIDTH // 3, CARD_HEIGHT // 3))
+
+        self.robot_photo = ImageTk.PhotoImage(robo_image)
 
         # load the point images
         point_values = {n.points for n in gameboard.values()}
@@ -175,25 +177,36 @@ class GridWithPoint():
 
         self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
 
+        self.draw_robot("A", 4)
+
+    def draw_robot(self, x, y):
+        point_x, point_y = self.calculate_grid_pos(x, y, size=3)
+        self.canvas.delete("robot")
+        self.canvas.create_image(point_x, point_y, image=self.robot_photo, anchor=tk.NW, tags="robot")
+
+
     def draw_point(self, x, y, id):
         points = gameboard[id].points
 
         if points == 0:
             return
 
-        # Convert A-E to numerical coordinates
-        xPos = 6-(ord(x.upper()) - ord('A') + 1)
-        yPos = y + 1
-
-        # Calculate the pixel position based on the grid size
-        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20
-        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20
+        point_x, point_y = self.calculate_grid_pos(x, y)
 
         # Encode the tag
         tag = "point" + str(x) + str(y)
 
         # Update the red point position
         self.canvas.create_image(point_x, point_y, image=self.point_images[points], anchor=tk.NW, tags=tag)
+
+    def calculate_grid_pos(self, x, y, size=1):
+        # Convert A-E to numerical coordinates
+        xPos = 6 - (ord(x.upper()) - ord('A') + 1)
+        yPos = y + 1
+        # Calculate the pixel position based on the grid size
+        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20*size
+        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20*size
+        return point_x, point_y
 
     def remove_point(self, x, y):
         tag = "point" + str(x) + str(y)
@@ -441,6 +454,8 @@ class App(tk.Tk):
         global gameboard
 
         ps = gameboard.get(rfid)
+
+        self.grid_with_point.draw_robot(ps.xPosition, ps.yPosition)
 
         if rfid not in self.seen_cards:
             self.grid_with_point.remove_point(ps.xPosition, ps.yPosition)

@@ -328,6 +328,19 @@ class App(tk.Tk):
                 self.execute()
 
     def execute(self):
+        # Don't do anything if no cards have been placed
+
+        if all(x.card is None for x in self.slots):
+            self.play_count += 1
+            self.execute_button.config(state=tk.DISABLED)
+            self.timer_running = False
+
+            if self.play_count >= 3:
+                self.game_over()
+            else:
+                self.draw_button.config(state=tk.NORMAL)
+
+            return
 
         self.execute_button.config(state=tk.DISABLED)
 
@@ -350,9 +363,10 @@ class App(tk.Tk):
         """Display the 'GAME OVER' text."""
         self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
         self.game_over_label.lift()  # Bring the canvas to the front
-        self.after(5000, self.enable_hide)  # After 5 seconds, allow the click event to hide the text
-        self.game_over_label.bind("<Button-1>", self.hide_game_over)  # Bind the click event
+        self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
+        self.canvas.bind("<Button-1>", self.hide_game_over)  # Bind the click event
 
+        self.play_count = 0
         self.seen_cards = []
         self.draw_button.config(state=tk.DISABLED)
 
@@ -364,10 +378,10 @@ class App(tk.Tk):
         """Hide the 'GAME OVER' text."""
         if self.allow_hide:
             tk.Misc.lower(self.game_over_label, self.canvas)  # Send the canvas to the back
-        self.draw_button.config(state=tk.NORMAL)
-        self.score = 0
-        self.update_score_display()
-        self.place_points_markers()
+            self.draw_button.config(state=tk.NORMAL)
+            self.score = 0
+            self.update_score_display()
+            self.place_points_markers()
 
     def listenToTheRadio(self):
         global gameboard
@@ -391,7 +405,6 @@ class App(tk.Tk):
                         self.play_count += 1
                         if (self.play_count >= 3):
                             self.after(0, self.game_over())
-                            self.play_count = 0
                         else:
                             # sjekk OFF_TAG
                             if (message.find("OFF_TAG")) >= 0:

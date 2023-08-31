@@ -30,7 +30,7 @@ for i in range(1, len(sys.argv)):
         except IndexError:
             print("Error: --usb_port argument provided but no value given.")
             sys.exit(1)
-        break
+
     if sys.argv[i] == '--scale':
         try:
             SCALE = float(sys.argv[i + 1])

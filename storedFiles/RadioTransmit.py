@@ -5,7 +5,7 @@ import radio
 # Set up the serial connection
 uart.init(baudrate=115200)
 
-display.show(Image.HOUSE)
+display.show(Image.DIAMOND)
 
 PACKET_SIZE = 64
 
@@ -15,7 +15,9 @@ def pad_string(input_str, size, pad_char='#'):
 
 # configure the radio
 MAX_MSG_LENGTH = 251
-radio.config(length=MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
+radio.config(length=MAX_MSG_LENGTH, channel=22, power=7, address=0x276E5F98)
+#radio.config(length=MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
+
 # turn on the radio
 radio.on()
 

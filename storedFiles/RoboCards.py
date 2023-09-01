@@ -8,6 +8,8 @@ import serial
 
 from PIL import Image, ImageTk
 
+CARD_CODES = 'LRFU2'
+
 CARDS_DRAW = 6
 NUM_SLOTS = 4
 
@@ -15,6 +17,7 @@ ROUND_TIME = 30
 
 BG_COLOR = '#FFE1B7'
 ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
+GAME_OVER_FONT = ("Press Start 2P", 50)  # Adjust the size as needed
 
 CARD_WIDTH = 400
 CARD_HEIGHT = 400
@@ -39,7 +42,8 @@ for i in range(1, len(sys.argv)):
             SCALE = float(sys.argv[i + 1])
             CARD_WIDTH = round(CARD_WIDTH * SCALE)
             CARD_HEIGHT = round(CARD_HEIGHT * SCALE)
-            ARCADE_FONT = ("Press Start 2P", round(20*SCALE))
+            ARCADE_FONT = ("Press Start 2P", round(20 * SCALE))
+            GAME_OVER_FONT = ("Press Start 2P", round(50 * SCALE))
         except IndexError:
             print("Error: --scale argument provided but no value given.")
             sys.exit(1)
@@ -86,11 +90,20 @@ gameboard = {
     1664226294: Nexus("E", 5, 1)
 }
 
+card_image_cache = {}
+
+
+def load_card_image(label):
+    cardimage = tk.PhotoImage(file=f"roborally {label}.png")
+    x_factor = cardimage.width() // round(CARD_WIDTH / 1.5)
+    y_factor = cardimage.height() // round(CARD_HEIGHT / 1.5)
+    card_image_cache[label] = cardimage.subsample(x_factor, y_factor)
+
 
 class Card(tk.Label):
     def __init__(self, parent, index, **kwargs):
 
-        self.code = random.choice('LRFU')
+        self.code = random.choice(CARD_CODES)
         self.load_image(self.code)
         super().__init__(parent, image=self.display_image, borderwidth=2, relief="ridge")
 
@@ -103,11 +116,13 @@ class Card(tk.Label):
         self.slot = None
 
     def load_image(self, label):
-        self.image = tk.PhotoImage(file=f"roborally {label}.png")
+        global card_image_cache
+        if not label in card_image_cache:
+            load_card_image(label)
+
+        self.display_image = card_image_cache[label]
+
         # Calculate the subsample factors based on the image size and card size
-        x_factor = self.image.width() // round(CARD_WIDTH / 1.5)
-        y_factor = self.image.height() // round(CARD_HEIGHT / 1.5)
-        self.display_image = self.image.subsample(x_factor, y_factor)
 
     def on_press(self, event):
         self.x = event.x
@@ -167,8 +182,6 @@ class Slot(tk.Label):
             self.winfo_y() < card_center_y < self.winfo_y() + self.winfo_height()
 
 
-
-
 class GridWithPoint():
     def __init__(self, parent, x_position, y_position, grid_image_path, point_image_path):
         self.grid_height = CARD_HEIGHT * 2
@@ -213,7 +226,6 @@ class GridWithPoint():
         self.canvas.delete("robot")
         self.canvas.create_image(point_x, point_y, image=self.robot_photo, anchor=tk.NW, tags="robot")
 
-
     def draw_point(self, x, y, id):
         points = gameboard[id].points
 
@@ -233,13 +245,20 @@ class GridWithPoint():
         xPos = 6 - (ord(x.upper()) - ord('A') + 1)
         yPos = y + 1
         # Calculate the pixel position based on the grid size
-        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20*size
-        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20*size
+        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20 * size
+        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20 * size
         return point_x, point_y
 
     def remove_point(self, x, y):
         tag = "point" + str(x) + str(y)
         self.canvas.delete(tag)
+
+
+def loadAllCardFiles():
+    global card_image_cache
+    for code in CARD_CODES:
+        load_card_image(code)
+
 
 class App(tk.Tk):
     ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
@@ -251,8 +270,10 @@ class App(tk.Tk):
         self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
-        self.geometry(f"{7 * CARD_WIDTH + 100}x{NUM_SLOTS * CARD_HEIGHT}")
+        self.geometry(f"{7 * CARD_WIDTH + 100}x{5 * CARD_HEIGHT}")
         self.configure(bg=BG_COLOR)  # Set the window background color
+
+        loadAllCardFiles()
 
         # Load the background image
         self.bg_image = tk.PhotoImage(file="roborally BG2.png")
@@ -271,7 +292,6 @@ class App(tk.Tk):
         self.slots_x = 10
         self.slots_y = CARD_HEIGHT + 20
         self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(7)]
-
 
         self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(NUM_SLOTS)]
 
@@ -313,9 +333,15 @@ class App(tk.Tk):
         self.score_label.place(x=4 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Create a label for the "GAME OVER" text
-        self.game_over_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=("Press Start 2P", 50), fg="red", bg='blue')
+        self.game_over_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=GAME_OVER_FONT, fg="red", bg='blue')
         self.game_over_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         self.game_over_label.lower()  # Send it to the back initially
+
+        # Set up the high score functionality
+        self.cursor_visible = False
+        self.is_high_score = False
+        self.name = ""
+        self.bind("<Key>", self.capture_key)
 
         # Initially, don't allow the click event to hide the text
         self.allow_hide = False
@@ -393,8 +419,8 @@ class App(tk.Tk):
             self.execute_button.config(state=tk.DISABLED)
             self.timer_running = False
 
-            if self.play_count >= 3:
-                self.game_over()
+            if self.play_count >= MAX_PLAYS:
+                self.game_over(high_score=self.score > 0)
             else:
                 self.draw_button.config(state=tk.NORMAL)
 
@@ -417,16 +443,59 @@ class App(tk.Tk):
         thread = threading.Thread(target=self.listenToTheRadio)
         thread.start()
 
-    def game_over(self):
+    def game_over(self, high_score=True):
         """Display the 'GAME OVER' text."""
-        self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
+        self.name = ""
+        if not high_score:
+            self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
+            self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
+            self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
+        else:
+            self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\nEnter your name:")
+            self.is_high_score = True
+            self.toggle_cursor()
         self.game_over_label.lift()  # Bring the canvas to the front
-        self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
-        self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
 
         self.play_count = 0
         self.seen_cards = []
         self.draw_button.config(state=tk.DISABLED)
+
+    def update_game_over_label(self):
+        cursor = "|" if self.cursor_visible else " "
+        self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.name}{cursor}")
+        # self.game_over_label.config(text=f"GAME OVER\n\nName: {self.name}{cursor}")
+
+    def toggle_cursor(self):
+        if not self.is_high_score:
+            return
+        self.cursor_visible = not self.cursor_visible
+        self.update_game_over_label()
+        self.after(500, self.toggle_cursor)
+
+    def capture_key(self, event):
+        allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ"
+        if len(self.name) < 5 or event.keysym == "BackSpace":
+            if event.keysym == "BackSpace":
+                self.name = self.name[:-1]
+            elif (event.keysym == "Return"):
+                if len(self.name) > 0:
+                    self.submit_high_score()
+                    return
+            elif len(event.char) == 1 and event.char.upper() in allowed_chars:
+                self.name += event.char.upper()
+
+            self.update_game_over_label()
+
+    def submit_high_score(self):
+        name = self.name
+        self.name = ""
+
+        if len(name) > 5:
+            name = name[:5]
+        print(f"High score submitted with name: {name}")
+        self.allow_hide = True
+        self.is_high_score = False
+        self.hide_game_over(None)
 
     def enable_hide(self):
         """Allow the 'GAME OVER' text to be hidden."""
@@ -461,7 +530,7 @@ class App(tk.Tk):
                     if find >= 0:
 
                         self.play_count += 1
-                        if (self.play_count >= 3):
+                        if (self.play_count >= MAX_PLAYS):
                             self.after(0, self.game_over())
                         else:
                             # sjekk OFF_TAG

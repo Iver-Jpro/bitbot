@@ -8,6 +8,9 @@ import serial
 
 from PIL import Image, ImageTk
 
+CARDS_DRAW = 6
+NUM_SLOTS = 4
+
 ROUND_TIME = 30
 
 BG_COLOR = '#FFE1B7'
@@ -248,7 +251,7 @@ class App(tk.Tk):
         self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
-        self.geometry(f"{7 * CARD_WIDTH + 100}x{5 * CARD_HEIGHT}")
+        self.geometry(f"{7 * CARD_WIDTH + 100}x{NUM_SLOTS * CARD_HEIGHT}")
         self.configure(bg=BG_COLOR)  # Set the window background color
 
         # Load the background image
@@ -270,7 +273,7 @@ class App(tk.Tk):
         self.cards = [Card(self, index=i, borderwidth=2, relief="ridge") for i in range(7)]
 
 
-        self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(5)]
+        self.slots = [Slot(self, borderwidth=2, relief="sunken") for _ in range(NUM_SLOTS)]
 
         for i, slot in enumerate(self.slots):
             slot.place(x=self.slots_x + i * CARD_WIDTH + CARD_WIDTH, y=self.slots_y)
@@ -341,7 +344,7 @@ class App(tk.Tk):
             drawn_cards.append("U")
 
         # Fill the rest of the slots with the other card types
-        for _ in range(7 - len(drawn_cards)):
+        for _ in range(CARDS_DRAW - len(drawn_cards)):
             drawn_cards.append(random.choice(card_types))
 
         # Shuffle the list to randomize the order

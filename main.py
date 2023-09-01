@@ -7,7 +7,13 @@ from microbit import *
 
 class Globals:
     def __init__(self):
-        self.MAX_MSG_LENGTH = 251
+        self.CURRENT_ROBOT = 2
+        self.playerId = 0
+
+        self.robots = [Robot(1.0, 1.0, True),
+                       Robot(1.0, 1.0, True),
+                       Robot(1.2, 1.0, False),
+                       Robot(1.0, 1.0, True)]
 
         self.cards = {
             1944688892: Card(1),
@@ -37,7 +43,9 @@ class Globals:
             1664226294: Card(1)
         }
 
-        self.gameTime = 20000
+        self.MAX_MSG_LENGTH = 251
+
+        self.game_timeout = 4000
         self.tagDisplayTime = 500
 
         self.tags = set()
@@ -51,13 +59,16 @@ class Globals:
         self.points = 0
         self.runIsStarted = False
 
-        self.useCollisionDetection = True
-
 
 class Card:
     def __init__(self, points):
         self.points = points
 
+class Robot:
+    def __init__(self, leftCalibrate, rightCalibrate, useCollisionDetection):
+        self.leftCalibrate = leftCalibrate
+        self.rightCalibrate = rightCalibrate
+        self.useCollisionDetection = useCollisionDetection
 
 class RFIDCom:
     READY = 1
@@ -143,11 +154,11 @@ class PN532:
         if (frameLen + response[4]) & 0xFF != 0:
             raise RuntimeError("Response length checksum mismatch")
         # Check frame checksum value matches bytes.
-        checksum = sum(response[5 : 5 + frameLen + 1]) & 0xFF
+        checksum = sum(response[5: 5 + frameLen + 1]) & 0xFF
         if checksum != 0:
             raise RuntimeError("Response checksum mismatch:", checksum)
         # Return frame data.
-        return response[5 : 5 + frameLen]
+        return response[5: 5 + frameLen]
 
     def isReady(self):
         return self._i2c.read(self.PN532_ADDRESS, 1) == b"\x01"
@@ -276,7 +287,8 @@ class Drive:
     startedTurning = 0
     isOnLine = False
 
-    def __init__(self):
+    def __init__(self, globals):
+        self.globals = globals
         self.state = DriveState.READY
         self.stop()
 
@@ -290,19 +302,21 @@ class Drive:
         return 0
 
     def adjustMotors(self, left, right):
+        robot = self.globals.robots[self.globals.CURRENT_ROBOT]
+
         if left >= 0:
-            pin16.write_analog(left)
+            pin16.write_analog(left*robot.leftCalibrate)
             pin8.write_analog(0)
         else:
             pin16.write_analog(0)
-            pin8.write_analog(-left)
+            pin8.write_analog(-left*robot.leftCalibrate)
 
         if right >= 0:
-            pin14.write_analog(right)
+            pin14.write_analog(right*robot.rightCalibrate)
             pin12.write_analog(0)
         else:
             pin14.write_analog(0)
-            pin12.write_analog(-right)
+            pin12.write_analog(-right*robot.rightCalibrate)
 
     def stop(self):
         self.adjustMotors(0, 0)
@@ -376,15 +390,16 @@ class Drive:
         else:
             self.adjustMotors(self.TORQUE, self.TORQUE)
 
-    def handleDrive(self, globals):
+    def handleDrive(self):
         if self.state is DriveState.READY:
-            if not len(globals.commands):
+            if not len(self.globals.commands):
+                radio.send("No more commands")
                 return False
-            command = globals.commands[0]
-            globals.commands = globals.commands[1:]
+            command = self.globals.commands[0]
+            self.globals.commands = self.globals.commands[1:]
             if command == "S":
-                globals.tags.clear()
-                globals.points = 0
+                self.globals.tags.clear()
+                self.globals.points = 0
                 display.scroll("0", wait=False, loop=True)
             elif command == "L":
                 self.turnLeft()
@@ -430,7 +445,10 @@ def prepareForCommandsDownload(pn532, drive, globals):
     pn532.handleRFID(globals)
     placed = globals.isOnTag
     if not placed:
-        setLEDs(globals.fireleds, 1.0, 1.0, 0, 0.5)
+        if globals.playerId == 0:
+            setLEDs(globals.fireleds, 1.0, 1.0, 0, 0.5)
+        else:
+            setLEDs(globals.fireleds, 1.0, 0, 1.0, 0.5)
 
     return placed
 
@@ -452,14 +470,18 @@ def endRun(globals, drive):
 
 globals = Globals()
 
-if button_a.is_pressed() or button_b.is_pressed():
-    globals.useCollisionDetection = False
+if button_a.is_pressed():
+    globals.playerId = 1
 
-radio.config(length=globals.MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
+if globals.playerId == 0:
+    radio.config(length=globals.MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
+else:
+    radio.config(length=globals.MAX_MSG_LENGTH, channel=22, power=7, address=0x276E5F98)
+
 radio.on()
 display.on()
 pn532 = PN532(i2c)
-drive = Drive()
+drive = Drive(globals)
 
 
 while True:
@@ -472,19 +494,20 @@ while True:
 
     setLEDs(globals.fireleds, 0, 0, 0, 0)
     globals.runIsStarted = True
-    currentGameStartTime = running_time()
+    globals.mostRecentTagTime = running_time()
     try:
         while True:
             runningTime = running_time()
-            if runningTime >= (currentGameStartTime + globals.gameTime):
+            if runningTime >= (globals.mostRecentTagTime + globals.game_timeout):
                 break
 
-            if globals.useCollisionDetection and pin1.read_digital() == 0:
+            if globals.robots[globals.CURRENT_ROBOT].useCollisionDetection and pin1.read_digital() == 0:
+                radio.send("collision!")
                 break
 
             pn532.handleRFID(globals)
 
-            if not drive.handleDrive(globals):
+            if not drive.handleDrive():
                 break
             if globals.mostRecentTagTime != 0 and runningTime <= (
                     globals.mostRecentTagTime + globals.tagDisplayTime
@@ -508,6 +531,15 @@ while True:
                     / globals.tagDisplayTime,
                     2 + abs(tagPoints)
                 )
-    except (Exception):
+    except Exception as e:
+        exc= str(e)
+
+        exception_text = "Exception: " + str(e) + "\n"
+       
+        chunk_size = globals.MAX_MSG_LENGTH
+        for i in range(0, len(exception_text), chunk_size):
+            chunk = exception_text[i:i+chunk_size]
+            radio.send(chunk)
+
         display.show(Image.SKULL)
     endRun(globals, drive)

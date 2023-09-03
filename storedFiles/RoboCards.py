@@ -458,15 +458,8 @@ class App(tk.Tk):
     def game_over(self, high_score=True):
         """Display the 'GAME OVER' text."""
         self.player_text_input = ""
-        # if not high_score:
-        #     self.message_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
-        #     self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
-        #     self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
-        # else:
-
         self.gamestate = Gamestate.ENTER_EMAIL
 
-        # self.message_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\nEnter your name:")
         self.message_label.config(
             text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle, or press Return to skip:\n {self.player_text_input}")
         self.is_high_score = True
@@ -486,7 +479,7 @@ class App(tk.Tk):
             cursor = "|" if self.cursor_visible else " "
             self.message_label.config(
                 text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.player_text_input}{cursor}")
-            # self.game_over_label.config(text=f"GAME OVER\n\nName: {self.name}{cursor}")
+
 
     def toggle_cursor(self):
         if not self.is_high_score:
@@ -496,6 +489,13 @@ class App(tk.Tk):
         self.after(500, self.toggle_cursor)
 
     def capture_key(self, event):
+        if event.keysym == "Escape":
+            self.allow_hide = True
+            self.hide_game_over(None)
+            self.gamestate=Gamestate.PLAYING
+            self.draw_button.config(state=tk.NORMAL)
+            return
+
         allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ"
         # todo: handle escape
         if self.gamestate == Gamestate.ENTER_EMAIL:
@@ -503,22 +503,26 @@ class App(tk.Tk):
             if event.keysym == "BackSpace":
                 self.player_text_input = self.player_text_input[:-1]
             elif event.keysym == "Return":
-                if len(self.player_text_input) > 0:
-                    self.submit_email()
-                self.player_text_input = ""
                 self.gamestate = Gamestate.ENTER_NAME
+
+                if len(self.player_text_input) > 0:
+                    self.player_text_input = self.submit_email()
+                else:
+                    self.player_text_input = ""
 
             elif len(event.char) == 1 :
                 self.player_text_input += event.char
                 self.update_message_label()
+
         elif self.gamestate == Gamestate.ENTER_NAME:
-            if len(self.player_text_input) < 5 or event.keysym == "BackSpace":
+            if event.keysym == "Return":
+                if len(self.player_text_input) > 0:
+                    self.submit_high_score()
+                    return
+            elif len(self.player_text_input) < 5 or event.keysym == "BackSpace":
                 if event.keysym == "BackSpace":
                     self.player_text_input = self.player_text_input[:-1]
-                elif (event.keysym == "Return"):
-                    if len(self.player_text_input) > 0:
-                        self.submit_high_score()
-                        return
+
                 elif len(event.char) == 1 and event.char.upper() in allowed_chars:
                     self.player_text_input += event.char.upper()
 
@@ -610,6 +614,11 @@ class App(tk.Tk):
         # todo: validate and register email
         email = self.player_text_input
         print("submitting email: " + email)
+
+        if random.randint(0, 1) == 0:
+            return ''
+        else:
+            return "MARIO"
 
 
 if __name__ == "__main__":

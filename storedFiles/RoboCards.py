@@ -423,6 +423,16 @@ class App(tk.Tk):
             else:
                 self.execute()
 
+    def display_move_car_message(self, last_card):
+        last_pos = gameboard.get(last_card)
+        if last_pos is None:
+            self.message_label.config(text=f"Move robocar to position A4")
+        else:
+            self.message_label.config(text=f"Move robocar to position {last_pos.xPosition}{last_pos.yPosition}")
+        self.allow_hide = False
+        self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
+        self.message_label.lift()
+
     def execute(self):
         # Don't do anything if no cards have been placed
 
@@ -480,7 +490,6 @@ class App(tk.Tk):
             self.message_label.config(
                 text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.player_text_input}{cursor}")
 
-
     def toggle_cursor(self):
         if not self.is_high_score:
             return
@@ -492,7 +501,7 @@ class App(tk.Tk):
         if event.keysym == "Escape":
             self.allow_hide = True
             self.hide_game_over(None)
-            self.gamestate=Gamestate.PLAYING
+            self.gamestate = Gamestate.PLAYING
             self.draw_button.config(state=tk.NORMAL)
             return
 
@@ -510,7 +519,7 @@ class App(tk.Tk):
                 else:
                     self.player_text_input = ""
 
-            elif len(event.char) == 1 :
+            elif len(event.char) == 1:
                 self.player_text_input += event.char
                 self.update_message_label()
 
@@ -540,8 +549,9 @@ class App(tk.Tk):
         self.hide_game_over(None)
 
     def enable_hide(self):
-        """Allow the 'GAME OVER' text to be hidden."""
+        """Allow the message text to be hidden."""
         self.allow_hide = True
+        self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
 
     def hide_game_over(self, event):
         """Hide the 'GAME OVER' text."""
@@ -585,7 +595,7 @@ class App(tk.Tk):
                     else:
                         try:
                             rfid = int(message)
-                            if gameboard.get(rfid) != None:
+                            if gameboard.get(rfid) is not None:
                                 self.addPoints(rfid)
                         except ValueError:
                             print("Not a number" + message)

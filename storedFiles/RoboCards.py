@@ -3,6 +3,7 @@ import random
 import sys
 import threading
 import tkinter as tk
+from enum import Enum
 
 import serial
 
@@ -260,13 +261,21 @@ def loadAllCardFiles():
         load_card_image(code)
 
 
+class Gamestate(Enum):
+    PLAYING = 1
+    ENTER_EMAIL = 2
+    ENTER_NAME = 3
+
+
 class App(tk.Tk):
-    ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
-    ser.timeout = 1
+    # TODO: Add serial port support
+    # ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
+    # ser.timeout = 1
 
     def __init__(self):
         super().__init__()
 
+        self.gamestate = Gamestate.PLAYING
         self.seen_cards = []
         self.play_count = 0
         self.title("JRobotics Racing")
@@ -302,11 +311,13 @@ class App(tk.Tk):
         button_width = 15  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
-        self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
+        self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font,
+                                     width=button_width, height=button_height)
         drawbuttonY = 2 * CARD_HEIGHT
         self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=drawbuttonY)
 
-        self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font, width=button_width, height=button_height)
+        self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font,
+                                        width=button_width, height=button_height)
         self.execute_button.place(x=2.7 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Disable the "Execute" button when the app starts up
@@ -333,14 +344,15 @@ class App(tk.Tk):
         self.score_label.place(x=4 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Create a label for the "GAME OVER" text
-        self.game_over_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=GAME_OVER_FONT, fg="red", bg='blue')
-        self.game_over_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        self.game_over_label.lower()  # Send it to the back initially
+        self.message_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=GAME_OVER_FONT, fg="red",
+                                      bg='blue')
+        self.message_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.message_label.lower()  # Send it to the back initially
 
         # Set up the high score functionality
         self.cursor_visible = False
         self.is_high_score = False
-        self.name = ""
+        self.player_text_input = ""
         self.bind("<Key>", self.capture_key)
 
         # Initially, don't allow the click event to hide the text
@@ -445,50 +457,76 @@ class App(tk.Tk):
 
     def game_over(self, high_score=True):
         """Display the 'GAME OVER' text."""
-        self.name = ""
-        if not high_score:
-            self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
-            self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
-            self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
-        else:
-            self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\nEnter your name:")
-            self.is_high_score = True
-            self.toggle_cursor()
-        self.game_over_label.lift()  # Bring the canvas to the front
+        self.player_text_input = ""
+        # if not high_score:
+        #     self.message_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}")
+        #     self.bind("<Button-1>", self.hide_game_over)  # Bind the click event
+        #     self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
+        # else:
+
+        self.gamestate = Gamestate.ENTER_EMAIL
+
+        # self.message_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\nEnter your name:")
+        self.message_label.config(
+            text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle, or press Return to skip:\n {self.player_text_input}")
+        self.is_high_score = True
+        self.toggle_cursor()
+        self.message_label.lift()  # Bring the canvas to the front
 
         self.play_count = 0
         self.seen_cards = []
         self.draw_button.config(state=tk.DISABLED)
 
-    def update_game_over_label(self):
-        cursor = "|" if self.cursor_visible else " "
-        self.game_over_label.config(text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.name}{cursor}")
-        # self.game_over_label.config(text=f"GAME OVER\n\nName: {self.name}{cursor}")
+    def update_message_label(self):
+        if self.gamestate == Gamestate.ENTER_EMAIL:
+            cursor = "|" if self.cursor_visible else " "
+            self.message_label.config(
+                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle, or press Return to skip:\n {self.player_text_input}{cursor}")
+        elif self.gamestate == Gamestate.ENTER_NAME:
+            cursor = "|" if self.cursor_visible else " "
+            self.message_label.config(
+                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.player_text_input}{cursor}")
+            # self.game_over_label.config(text=f"GAME OVER\n\nName: {self.name}{cursor}")
 
     def toggle_cursor(self):
         if not self.is_high_score:
             return
         self.cursor_visible = not self.cursor_visible
-        self.update_game_over_label()
+        self.update_message_label()
         self.after(500, self.toggle_cursor)
 
     def capture_key(self, event):
         allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ"
-        if len(self.name) < 5 or event.keysym == "BackSpace":
-            if event.keysym == "BackSpace":
-                self.name = self.name[:-1]
-            elif (event.keysym == "Return"):
-                if len(self.name) > 0:
-                    self.submit_high_score()
-                    return
-            elif len(event.char) == 1 and event.char.upper() in allowed_chars:
-                self.name += event.char.upper()
+        # todo: handle escape
+        if self.gamestate == Gamestate.ENTER_EMAIL:
 
-            self.update_game_over_label()
+            if event.keysym == "BackSpace":
+                self.player_text_input = self.player_text_input[:-1]
+            elif event.keysym == "Return":
+                if len(self.player_text_input) > 0:
+                    self.submit_email()
+                self.player_text_input = ""
+                self.gamestate = Gamestate.ENTER_NAME
+
+            elif len(event.char) == 1 :
+                self.player_text_input += event.char
+                self.update_message_label()
+        elif self.gamestate == Gamestate.ENTER_NAME:
+            if len(self.player_text_input) < 5 or event.keysym == "BackSpace":
+                if event.keysym == "BackSpace":
+                    self.player_text_input = self.player_text_input[:-1]
+                elif (event.keysym == "Return"):
+                    if len(self.player_text_input) > 0:
+                        self.submit_high_score()
+                        return
+                elif len(event.char) == 1 and event.char.upper() in allowed_chars:
+                    self.player_text_input += event.char.upper()
+
+                self.update_message_label()
 
     def submit_high_score(self):
-        name = self.name
-        self.name = ""
+        name = self.player_text_input
+        self.player_text_input = ""
 
         if len(name) > 5:
             name = name[:5]
@@ -504,7 +542,7 @@ class App(tk.Tk):
     def hide_game_over(self, event):
         """Hide the 'GAME OVER' text."""
         if self.allow_hide:
-            tk.Misc.lower(self.game_over_label, self.canvas)  # Send the canvas to the back
+            tk.Misc.lower(self.message_label, self.canvas)  # Send the canvas to the back
             self.draw_button.config(state=tk.NORMAL)
             self.score = 0
             self.update_score_display()
@@ -567,6 +605,11 @@ class App(tk.Tk):
 
         for rfid, ps in gameboard.items():
             self.grid_with_point.draw_point(ps.xPosition, ps.yPosition, rfid)
+
+    def submit_email(self):
+        # todo: validate and register email
+        email = self.player_text_input
+        print("submitting email: " + email)
 
 
 if __name__ == "__main__":

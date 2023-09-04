@@ -9,7 +9,7 @@
         "cwd": "${workspaceFolder}",
         "env": {},
         "stopOnEntry": false,
-        "python": "C:\\Users\\ivers\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe",
+        "python": "C:\\Users\\ivers\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
         "debugOptions": [
             "RedirectOutput"
         ],

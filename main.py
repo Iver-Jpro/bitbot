@@ -499,10 +499,12 @@ while True:
         while True:
             runningTime = running_time()
             if runningTime >= (globals.mostRecentTagTime + globals.game_timeout):
+                # TODO: only send if car is not on a tag
+                radio.send("TIMEOUT")
                 break
 
             if globals.robots[globals.CURRENT_ROBOT].useCollisionDetection and pin1.read_digital() == 0:
-                radio.send("collision!")
+                radio.send("CRASH")
                 break
 
             pn532.handleRFID(globals)
@@ -535,7 +537,7 @@ while True:
         exc= str(e)
 
         exception_text = "Exception: " + str(e) + "\n"
-       
+
         chunk_size = globals.MAX_MSG_LENGTH
         for i in range(0, len(exception_text), chunk_size):
             chunk = exception_text[i:i+chunk_size]

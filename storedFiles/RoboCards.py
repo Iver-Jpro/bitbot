@@ -268,9 +268,8 @@ class Gamestate(Enum):
 
 
 class App(tk.Tk):
-    # TODO: Add serial port support
-    # ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
-    # ser.timeout = 1
+    ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
+    ser.timeout = 1
 
     def __init__(self):
         super().__init__()
@@ -426,7 +425,7 @@ class App(tk.Tk):
     def display_move_car_message(self, last_card):
         last_pos = gameboard.get(last_card)
         if last_pos is None:
-            self.message_label.config(text=f"Move robocar to position A4")
+            self.message_label.config(text=f"e robocar to position A4")
         else:
             self.message_label.config(text=f"Move robocar to position {last_pos.xPosition}{last_pos.yPosition}")
         self.allow_hide = False
@@ -564,7 +563,7 @@ class App(tk.Tk):
 
     def listenToTheRadio(self):
         global gameboard
-
+        last_rfid = 0
         while not self.timer_running:
 
             if self.ser.in_waiting > 1:
@@ -573,29 +572,26 @@ class App(tk.Tk):
 
                 print(usbMessage)
                 messages = usbMessage.split("\n")
-                messages.sort()
+                #messages.sort()
 
                 for message in messages:
                     print(message)
 
-                    find = message.find("RUN_END")
-                    if find >= 0:
+                    if message.find("RUN_END") >= 0:
 
                         self.play_count += 1
                         if (self.play_count >= MAX_PLAYS):
                             self.after(0, self.game_over())
-                        else:
-                            # sjekk OFF_TAG
-                            if (message.find("OFF_TAG")) >= 0:
-                                print("CAR IS OFF TAG")
 
                         self.after(0, self.draw_button.config(state=tk.NORMAL))
                         return  # break out of the loop
-
+                    elif message.find("TIMEOUT") >= 0 or message.find("CRASH") >= 0:
+                        self.display_move_car_message(last_rfid)
                     else:
                         try:
                             rfid = int(message)
                             if gameboard.get(rfid) is not None:
+                                last_rfid= rfid
                                 self.addPoints(rfid)
                         except ValueError:
                             print("Not a number" + message)

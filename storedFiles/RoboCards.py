@@ -18,7 +18,7 @@ NUM_SLOTS = 4
 ROUND_TIME = 30
 
 BG_COLOR = '#FFE1B7'
-ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
+ARCADE_FONT = ("Press Start 2P", 40)  # Adjust the size as needed
 GAME_OVER_FONT = ("Press Start 2P", 50)  # Adjust the size as needed
 
 CARD_WIDTH = 200
@@ -50,7 +50,7 @@ for i in range(1, len(sys.argv)):
             SCALE = float(sys.argv[i + 1])
             CARD_WIDTH = round(CARD_WIDTH * SCALE)
             CARD_HEIGHT = round(CARD_HEIGHT * SCALE)
-            ARCADE_FONT = ("Press Start 2P", round(10 * SCALE))
+            ARCADE_FONT = ("Press Start 2P", round(25 * SCALE))
             GAME_OVER_FONT = ("Press Start 2P", round(25 * SCALE))
         except IndexError:
             print("Error: --scale argument provided but no value given.")
@@ -338,17 +338,22 @@ class App(tk.Tk):
         button_width = 15  # Adjust the width as needed
         button_height = 2  # Adjust the height as needed
 
-        self.draw_button = tk.Button(self, text="Draw", command=self.draw, bg=BG_COLOR, font=button_font,
+        self.draw_button = tk.Button(self, text="Start Game", command=self.draw, bg=BG_COLOR, font=button_font,
                                      width=button_width, height=button_height)
         drawbuttonY = 2 * CARD_HEIGHT
-        self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=drawbuttonY)
+        #self.draw_button.place(x=1.3 * CARD_WIDTH + CARD_WIDTH, y=drawbuttonY)
+        self.draw_button.place(x=4 * CARD_WIDTH, y=drawbuttonY+100)
 
-        self.execute_button = tk.Button(self, text="Execute", command=self.execute, bg=BG_COLOR, font=button_font,
+        self.execute_button = tk.Button(self, text="Drive Now!", command=self.execute, bg=BG_COLOR, font=button_font,
                                         width=button_width, height=button_height)
-        self.execute_button.place(x=2.7 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
+        #self.execute_button.place(x=2.7 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
+        self.execute_button.place(x=4 * CARD_WIDTH, y=drawbuttonY+250)
 
         # Disable the "Execute" button when the app starts up
         self.execute_button.config(state=tk.DISABLED)
+
+        self.reset_button = tk.Button(self, text="Reset Game", command=self.prepare_new_game, bg=BG_COLOR, font=("Press Start 2P", 10), width=button_width, height=button_height)
+        self.reset_button.place(x=4 * CARD_WIDTH, y=drawbuttonY+400)
 
         # Timer label
         self.remaining_time = tk.IntVar(value=ROUND_TIME)
@@ -478,6 +483,7 @@ class App(tk.Tk):
             if self.play_count >= MAX_PLAYS:
                 self.game_over(high_score=self.score > 0)
             else:
+                self.update_button_text()
                 self.draw_button.config(state=tk.NORMAL)
 
             return
@@ -583,11 +589,13 @@ class App(tk.Tk):
     def prepare_new_game(self):
         self.gamestate = Gamestate.PLAYING
         self.score = 0
-        self.remaining_time = 30
+        self.play_count = 0
+        self.remaining_time.set(30)
         self.update_score_display()
         self.timer_text.set(f"Time left: 30")
         self.place_points_markers()
         self.grid_with_point.draw_robot("A", 2)
+        self.after(0, self.draw_button.config(text="Start Game"))
         self.draw_button.config(state=tk.NORMAL)
         self.hide_cards()
 
@@ -600,10 +608,10 @@ class App(tk.Tk):
         """Hide the 'GAME OVER' text."""
         if self.allow_hide:
             tk.Misc.lower(self.message_label, self.canvas)  # Send the canvas to the back
-            # self.draw_button.config(state=tk.NORMAL)
-            # self.score = 0
-            # self.update_score_display()
-            # self.place_points_markers()
+
+
+    def update_button_text(self):
+        self.draw_button.config(text="Draw Cards")
 
     def listenToTheRadio(self):
         global gameboard
@@ -630,9 +638,10 @@ class App(tk.Tk):
                     if message.find("RUN_END") >= 0:
 
                         self.play_count += 1
-                        if (self.play_count >= MAX_PLAYS):
+                        if self.play_count >= MAX_PLAYS:
                             self.after(0, self.game_over())
 
+                        self.after(0, self.update_button_text)
                         self.after(0, self.draw_button.config(state=tk.NORMAL))
                         return  # break out of the loop
                     elif message.find("TIMEOUT") >= 0 or message.find("CRASH") >= 0:

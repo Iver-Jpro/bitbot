@@ -578,6 +578,9 @@ class App(tk.Tk):
         self.is_high_score = False
         self.hide_game_over(None)
         self.gamestate = Gamestate.PLAYING
+        self.score = 0
+        self.update_score_display()
+        self.place_points_markers()
         self.draw_button.config(state=tk.NORMAL)
 
     def enable_hide(self):
@@ -590,9 +593,9 @@ class App(tk.Tk):
         if self.allow_hide:
             tk.Misc.lower(self.message_label, self.canvas)  # Send the canvas to the back
             # self.draw_button.config(state=tk.NORMAL)
-            self.score = 0
-            self.update_score_display()
-            self.place_points_markers()
+            #self.score = 0
+            #self.update_score_display()
+            #self.place_points_markers()
 
     def listenToTheRadio(self):
         global gameboard

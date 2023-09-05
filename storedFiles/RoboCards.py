@@ -606,7 +606,7 @@ class App(tk.Tk):
 
                 usbMessage = self.ser.read(64).decode('utf-8').rstrip()
 
-                print(usbMessage)
+                #print(usbMessage)
                 messages = usbMessage.split("\n")
 
                 for message in messages:
@@ -633,6 +633,7 @@ class App(tk.Tk):
                     else:
                         try:
                             rfid = int(message)
+                            print (rfid)
                             if gameboard.get(rfid) is not None:
                                 last_rfid = rfid
                                 self.addPoints(rfid)

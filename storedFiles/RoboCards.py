@@ -4,6 +4,7 @@ import sys
 import threading
 import tkinter as tk
 from enum import Enum
+import HighScore
 
 import serial
 
@@ -20,8 +21,8 @@ BG_COLOR = '#FFE1B7'
 ARCADE_FONT = ("Press Start 2P", 20)  # Adjust the size as needed
 GAME_OVER_FONT = ("Press Start 2P", 50)  # Adjust the size as needed
 
-CARD_WIDTH = 400
-CARD_HEIGHT = 400
+CARD_WIDTH = 200
+CARD_HEIGHT = 200
 
 SCALE = 1.0
 
@@ -43,8 +44,8 @@ for i in range(1, len(sys.argv)):
             SCALE = float(sys.argv[i + 1])
             CARD_WIDTH = round(CARD_WIDTH * SCALE)
             CARD_HEIGHT = round(CARD_HEIGHT * SCALE)
-            ARCADE_FONT = ("Press Start 2P", round(20 * SCALE))
-            GAME_OVER_FONT = ("Press Start 2P", round(50 * SCALE))
+            ARCADE_FONT = ("Press Start 2P", round(10 * SCALE))
+            GAME_OVER_FONT = ("Press Start 2P", round(25 * SCALE))
         except IndexError:
             print("Error: --scale argument provided but no value given.")
             sys.exit(1)
@@ -64,31 +65,55 @@ class Nexus():
 
 
 gameboard = {
-    1944688892: Nexus("A", 1, 1),
-    2214546422: Nexus("A", 2, 2),
-    3287137276: Nexus("A", 3, 3),
-    871609077: Nexus("A", 4, 0),
-    4081897461: Nexus("A", 5, 1),
-    3004060668: Nexus("B", 1, 2),
+    1944688892: Nexus("A", 1, 3),
+    2214546422: Nexus("A", 2, 0),
+    3287137276: Nexus("A", 3, 1),
+    871609077: Nexus("A", 4, 1),
+    4081897461: Nexus("A", 5, 2),
+
+    3004060668: Nexus("B", 1, -2),
+    1944446709: Nexus("B", 2, 1),
+    1676494582: Nexus("B", 3, 2),
+    329147126: Nexus("B", 4, 1),
+    3543034358: Nexus("B", 5, -3),
+
+    2735262972: Nexus("C", 1, 1),
+    2481922550: Nexus("C", 2, 2),
+    3010023420: Nexus("C", 3, -1),
+    864110588: Nexus("C", 4, 1),
+    601800188: Nexus("C", 5, 1),
+
+    3813451004: Nexus("D", 1, 3),
+    3019725814: Nexus("D", 2, 1),
+    1667070454: Nexus("D", 3, 2),
+    868100604: Nexus("D", 4, -1),
+    3278031868: Nexus("D", 5, 6)
+}
+
+gameboard_day2 = {
+    1944688892: Nexus("A", 1, 2),
+    2214546422: Nexus("A", 2, 0),
+    3287137276: Nexus("A", 3, 1),
+    871609077: Nexus("A", 4, 2),
+    4081897461: Nexus("A", 5, 2),
+
+    3004060668: Nexus("B", 1, 1),
     1944446709: Nexus("B", 2, 1),
     1676494582: Nexus("B", 3, -2),
     329147126: Nexus("B", 4, 1),
-    3543034358: Nexus("B", 5, 2),
-    601800188: Nexus("C", 1, -3),
-    864110588: Nexus("C", 2, 2),
-    3010023420: Nexus("C", 3, 1),
-    2481922550: Nexus("C", 4, 2),
-    2735262972: Nexus("C", 5, 1),
-    3813451004: Nexus("D", 1, 1),
+    3543034358: Nexus("B", 5, 1),
+
+    2735262972: Nexus("C", 1, 1),
+    2481922550: Nexus("C", 2, -2),
+    3010023420: Nexus("C", 3, 6),
+    864110588: Nexus("C", 4, -1),
+    601800188: Nexus("C", 5, -1),
+
+    3813451004: Nexus("D", 1, 2),
     3019725814: Nexus("D", 2, 1),
     1667070454: Nexus("D", 3, 1),
-    868100604: Nexus("D", 4, 2),
-    3278031868: Nexus("D", 5, -1),
-    869677308: Nexus("E", 1, 6),
-    3279192572: Nexus("E", 2, 2),
-    2212260348: Nexus("E", 3, 1),
-    1945225468: Nexus("E", 4, 1),
-    1664226294: Nexus("E", 5, 1)
+    868100604: Nexus("D", 4, 1),
+    3278031868: Nexus("D", 5, 3)
 }
 
 card_image_cache = {}
@@ -168,10 +193,10 @@ class Card(tk.Label):
 
 class Slot(tk.Label):
     def __init__(self, parent, **kwargs):
-        self.bg_image = tk.PhotoImage(file="roborally background.png")
-        x_factor = self.bg_image.width() // round(CARD_WIDTH / 1.5)
-        y_factor = self.bg_image.height() // round(CARD_HEIGHT / 1.5)
-        self.display_image = self.bg_image.subsample(x_factor, y_factor)
+        self.bg_image = tk.PhotoImage(file="roborally background3.png")
+        # x_factor = self.bg_image.width() // round(CARD_WIDTH / 1.5)
+        # y_factor = self.bg_image.height() // round(CARD_HEIGHT / 1.5)
+        self.display_image = self.bg_image.subsample(1, 1)
 
         super().__init__(parent, image=self.display_image)
         self.card = None
@@ -185,11 +210,12 @@ class Slot(tk.Label):
 
 class GridWithPoint():
     def __init__(self, parent, x_position, y_position, grid_image_path, point_image_path):
-        self.grid_height = CARD_HEIGHT * 2
+        self.grid_height = CARD_HEIGHT * 2 * 0.83447265625
         self.grid_width = CARD_WIDTH * 2
 
         self.canvas = tk.Canvas(parent, width=self.grid_width, height=self.grid_height, bg="orange")
-        self.bg_image = tk.PhotoImage(file="circuit-bg.png")
+        self.bg_image = tk.PhotoImage(file="bane_1.png")
+
         self.canvas.create_image(0, 0, image=self.bg_image, anchor=tk.NW)
 
         self.canvas.place(x=x_position, y=y_position)
@@ -200,7 +226,7 @@ class GridWithPoint():
         self.grid_photo = ImageTk.PhotoImage(grid_image)
 
         # Load the robot image
-        robo_image = Image.open("clownbot.png")
+        robo_image = Image.open("clownbot3.png")
         robo_image = robo_image.resize((CARD_WIDTH // 3, CARD_HEIGHT // 3))
 
         self.robot_photo = ImageTk.PhotoImage(robo_image)
@@ -218,9 +244,9 @@ class GridWithPoint():
 
         # Create a label for the grid image
 
-        self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
+        # self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
 
-        self.draw_robot("A", 4)
+        self.draw_robot("A", 2)
 
     def draw_robot(self, x, y):
         point_x, point_y = self.calculate_grid_pos(x, y, size=3)
@@ -243,11 +269,11 @@ class GridWithPoint():
 
     def calculate_grid_pos(self, x, y, size=1):
         # Convert A-E to numerical coordinates
-        xPos = 6 - (ord(x.upper()) - ord('A') + 1)
-        yPos = y + 1
+        yPos = 6 - (ord(x.upper()) - ord('A') + 1)
+        xPos = 6-y
         # Calculate the pixel position based on the grid size
-        point_x = (self.grid_width // 6) * xPos - CARD_WIDTH // 20 * size
-        point_y = (self.grid_height // 6) * (yPos - 1) - CARD_HEIGHT // 20 * size
+        point_x = ((self.grid_width // 6) + 3) * xPos - CARD_WIDTH // 20 * size
+        point_y = ((self.grid_height // 5) + 2) * (yPos - 1) - CARD_HEIGHT // 20 * size
         return point_x, point_y
 
     def remove_point(self, x, y):
@@ -284,7 +310,7 @@ class App(tk.Tk):
         loadAllCardFiles()
 
         # Load the background image
-        self.bg_image = tk.PhotoImage(file="roborally BG2.png")
+        self.bg_image = tk.PhotoImage(file="roborally BG3.png")
 
         # Create a canvas for the background
         self.canvas = tk.Canvas(self, width=self.winfo_screenwidth(), height=self.winfo_screenheight())
@@ -352,6 +378,7 @@ class App(tk.Tk):
         self.cursor_visible = False
         self.is_high_score = False
         self.player_text_input = ""
+        self.email = ""
         self.bind("<Key>", self.capture_key)
 
         # Initially, don't allow the click event to hide the text
@@ -371,8 +398,8 @@ class App(tk.Tk):
         # Possible card types
         card_types = ["L", "R", "F"]
 
-        # Decide if we should draw a "2" or "3" card
-        special_cards = [None, "2", "3"]
+        # Decide if we should draw a "2"card
+        special_cards = [None, "2"]
         drawn_special_card = random.choice(special_cards)
         drawn_cards = [drawn_special_card] if drawn_special_card else []
 
@@ -425,9 +452,9 @@ class App(tk.Tk):
     def display_move_car_message(self, last_card):
         last_pos = gameboard.get(last_card)
         if last_pos is None:
-            self.message_label.config(text=f"e robocar to position A4")
+            self.message_label.config(text=f"Please move robocar to Start position")
         else:
-            self.message_label.config(text=f"Move robocar to position {last_pos.xPosition}{last_pos.yPosition}")
+            self.message_label.config(text=f"Please move robocar to position {last_pos.xPosition}{last_pos.yPosition}\n\nClick to continue")
         self.allow_hide = False
         self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
         self.message_label.lift()
@@ -470,11 +497,11 @@ class App(tk.Tk):
         self.gamestate = Gamestate.ENTER_EMAIL
 
         self.message_label.config(
-            text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle, or press Return to skip:\n {self.player_text_input}")
+            text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle,\nor press Return to skip:\n {self.player_text_input}")
         self.is_high_score = True
         self.toggle_cursor()
         self.message_label.lift()  # Bring the canvas to the front
-
+        self.allow_hide = False
         self.play_count = 0
         self.seen_cards = []
         self.draw_button.config(state=tk.DISABLED)
@@ -483,11 +510,11 @@ class App(tk.Tk):
         if self.gamestate == Gamestate.ENTER_EMAIL:
             cursor = "|" if self.cursor_visible else " "
             self.message_label.config(
-                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle, or press Return to skip:\n {self.player_text_input}{cursor}")
+                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your email to join the raffle,\nor press Return to skip:\n {self.player_text_input}{cursor}")
         elif self.gamestate == Gamestate.ENTER_NAME:
             cursor = "|" if self.cursor_visible else " "
             self.message_label.config(
-                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nYou have a high score!\n\nEnter your name:\n {self.player_text_input}{cursor}")
+                text=f"GAME OVER\n\nFinal Score: {self.score}\n\nEnter your name (3-5 letters):\n {self.player_text_input}{cursor}")
 
     def toggle_cursor(self):
         if not self.is_high_score:
@@ -512,11 +539,8 @@ class App(tk.Tk):
                 self.player_text_input = self.player_text_input[:-1]
             elif event.keysym == "Return":
                 self.gamestate = Gamestate.ENTER_NAME
-
-                if len(self.player_text_input) > 0:
-                    self.player_text_input = self.submit_email()
-                else:
-                    self.player_text_input = ""
+                self.save_email()
+                self.player_text_input = ""
 
             elif len(event.char) == 1:
                 self.player_text_input += event.char
@@ -524,7 +548,7 @@ class App(tk.Tk):
 
         elif self.gamestate == Gamestate.ENTER_NAME:
             if event.keysym == "Return":
-                if len(self.player_text_input) > 0:
+                if len(self.player_text_input) >= 3:
                     self.submit_high_score()
                     return
             elif len(self.player_text_input) < 5 or event.keysym == "BackSpace":
@@ -543,9 +567,12 @@ class App(tk.Tk):
         if len(name) > 5:
             name = name[:5]
         print(f"High score submitted with name: {name}")
+        HighScore.post_score(self.score, name, self.email)
         self.allow_hide = True
         self.is_high_score = False
         self.hide_game_over(None)
+        self.gamestate = Gamestate.PLAYING
+        self.draw_button.config(state=tk.NORMAL)
 
     def enable_hide(self):
         """Allow the message text to be hidden."""
@@ -556,7 +583,7 @@ class App(tk.Tk):
         """Hide the 'GAME OVER' text."""
         if self.allow_hide:
             tk.Misc.lower(self.message_label, self.canvas)  # Send the canvas to the back
-            self.draw_button.config(state=tk.NORMAL)
+            # self.draw_button.config(state=tk.NORMAL)
             self.score = 0
             self.update_score_display()
             self.place_points_markers()
@@ -572,7 +599,13 @@ class App(tk.Tk):
 
                 print(usbMessage)
                 messages = usbMessage.split("\n")
-                #messages.sort()
+
+                for message in messages:
+                    if message.find("START_ERROR") >= 0:
+                        self.display_move_car_message(None)
+                        self.draw_button.config(state=tk.DISABLED)
+                        self.execute_button.config(state=tk.NORMAL)
+                        return  # break out of the loop
 
                 for message in messages:
                     print(message)
@@ -587,11 +620,12 @@ class App(tk.Tk):
                         return  # break out of the loop
                     elif message.find("TIMEOUT") >= 0 or message.find("CRASH") >= 0:
                         self.display_move_car_message(last_rfid)
+
                     else:
                         try:
                             rfid = int(message)
                             if gameboard.get(rfid) is not None:
-                                last_rfid= rfid
+                                last_rfid = rfid
                                 self.addPoints(rfid)
                         except ValueError:
                             print("Not a number" + message)
@@ -616,15 +650,10 @@ class App(tk.Tk):
         for rfid, ps in gameboard.items():
             self.grid_with_point.draw_point(ps.xPosition, ps.yPosition, rfid)
 
-    def submit_email(self):
+    def save_email(self):
         # todo: validate and register email
-        email = self.player_text_input
-        print("submitting email: " + email)
-
-        if random.randint(0, 1) == 0:
-            return ''
-        else:
-            return "MARIO"
+        self.email = self.player_text_input
+        print("submitting email: " + self.email)
 
 
 if __name__ == "__main__":

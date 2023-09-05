@@ -8,40 +8,64 @@ from microbit import *
 class Globals:
     def __init__(self):
         self.CURRENT_ROBOT = 2
-        self.playerId = 0
 
-        self.robots = [Robot(1.0, 1.0, True),
-                       Robot(1.0, 1.0, True),
-                       Robot(1.2, 1.0, False),
-                       Robot(1.0, 1.0, True)]
+        self.robots = [Robot(0.90, 1.0, True),
+                       Robot(0.85, 1.0, True),
+                       Robot(1.0, 0.83, False),
+                       Robot(0.90, 1.0, True)]
 
         self.cards = {
-            1944688892: Card(1),
-            2214546422: Card(2),
-            3287137276: Card(3),
-            871609077: Card(0),
-            4081897461: Card(1),
-            3004060668: Card(2),
+            1944688892: Card(3),
+            2214546422: Card(0, True),
+            3287137276: Card(1),
+            871609077: Card(1),
+            4081897461: Card(2),
+
+            3004060668: Card(-2),
             1944446709: Card(1),
-            1676494582: Card(-2),
+            1676494582: Card(2),
             329147126: Card(1),
-            3543034358: Card(2),
-            601800188: Card(-3),
-            864110588: Card(2),
-            3010023420: Card(1),
-            2481922550: Card(2),
+            3543034358: Card(-3),
+
             2735262972: Card(1),
-            3813451004: Card(1),
+            2481922550: Card(2),
+            3010023420: Card(-1),
+            864110588: Card(1),
+            601800188: Card(1),
+
+            3813451004: Card(3),
             3019725814: Card(1),
-            1667070454: Card(1),
-            868100604: Card(2),
-            3278031868: Card(-1),
-            869677308: Card(6),
-            3279192572: Card(2),
-            2212260348: Card(1),
-            1945225468: Card(1),
-            1664226294: Card(1)
+            1667070454: Card(2),
+            868100604: Card(-1),
+            3278031868: Card(6),
         }
+
+        #Day 2 cards
+        # self.cards = {
+        #     1944688892: Card(2),
+        #     2214546422: Card(0, True),
+        #     3287137276: Card(1),
+        #     871609077: Card(2),
+        #     4081897461: Card(2),
+        #
+        #     3004060668: Card(1),
+        #     1944446709: Card(1),
+        #     1676494582: Card(-2),
+        #     329147126: Card(1),
+        #     3543034358: Card(1),
+        #
+        #     2735262972: Card(1),
+        #     2481922550: Card(-2),
+        #     3010023420: Card(6),
+        #     864110588: Card(-1),
+        #     601800188: Card(-1),
+        #
+        #     3813451004: Card(2),
+        #     3019725814: Card(1),
+        #     1667070454: Card(1),
+        #     868100604: Card(1),
+        #     3278031868: Card(3),
+        # }
 
         self.MAX_MSG_LENGTH = 251
 
@@ -61,8 +85,9 @@ class Globals:
 
 
 class Card:
-    def __init__(self, points):
+    def __init__(self, points, isStartCard=False):
         self.points = points
+        self.isStartCard = isStartCard
 
 class Robot:
     def __init__(self, leftCalibrate, rightCalibrate, useCollisionDetection):
@@ -393,7 +418,6 @@ class Drive:
     def handleDrive(self):
         if self.state is DriveState.READY:
             if not len(self.globals.commands):
-                radio.send("No more commands")
                 return False
             command = self.globals.commands[0]
             self.globals.commands = self.globals.commands[1:]
@@ -445,19 +469,31 @@ def prepareForCommandsDownload(pn532, drive, globals):
     pn532.handleRFID(globals)
     placed = globals.isOnTag
     if not placed:
-        if globals.playerId == 0:
-            setLEDs(globals.fireleds, 1.0, 1.0, 0, 0.5)
-        else:
-            setLEDs(globals.fireleds, 1.0, 0, 1.0, 0.5)
+        setLEDs(globals.fireleds, 1.0, 1.0, 0, 0.5)
 
     return placed
 
 
 def commandsDownload(globals):
     globals.commands = radio.receive_bytes()
+
     if globals.commands is None or len(globals.commands) == 0:
-        setLEDs(globals.fireleds, 0, 0, 1.0, 0.5)
+        if (
+                globals.mostRecentTag in globals.cards
+                and globals.cards.get(globals.mostRecentTag).isStartCard
+        ):
+            setLEDs(globals.fireleds, 0, 0, 1.0, 0.5)
+        else:
+            setLEDs(globals.fireleds, 1.0, 0, 1.0, 0.5)
+
         return False
+
+    if globals.commands[0] == 'S':
+        if globals.mostRecentTag not in globals.cards:
+            return False
+
+        if not globals.cards.get(globals.mostRecentTag).isStartCard:
+            return False
 
     globals.commands = str(globals.commands, "utf8")
     return True
@@ -468,20 +504,13 @@ def endRun(globals, drive):
     radio.send(str("RUN_END"))
 
 
-globals = Globals()
-
-if button_a.is_pressed():
-    globals.playerId = 1
-
-if globals.playerId == 0:
-    radio.config(length=globals.MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
-else:
-    radio.config(length=globals.MAX_MSG_LENGTH, channel=22, power=7, address=0x276E5F98)
-
-radio.on()
 display.on()
+globals = Globals()
 pn532 = PN532(i2c)
 drive = Drive(globals)
+
+radio.config(length=globals.MAX_MSG_LENGTH, channel=14, power=7, address=0x6795221E)
+radio.on()
 
 
 while True:
@@ -503,7 +532,10 @@ while True:
                 radio.send("TIMEOUT")
                 break
 
-            if globals.robots[globals.CURRENT_ROBOT].useCollisionDetection and pin1.read_digital() == 0:
+            if (
+                    globals.robots[globals.CURRENT_ROBOT].useCollisionDetection
+                    and pin1.read_digital() == 0
+            ):
                 radio.send("CRASH")
                 break
 
@@ -534,8 +566,6 @@ while True:
                     2 + abs(tagPoints)
                 )
     except Exception as e:
-        exc= str(e)
-
         exception_text = "Exception: " + str(e) + "\n"
 
         chunk_size = globals.MAX_MSG_LENGTH

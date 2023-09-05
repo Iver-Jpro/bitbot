@@ -5,7 +5,7 @@ import radio
 # Set up the serial connection
 uart.init(baudrate=115200)
 
-display.show(Image.DIAMOND)
+display.show(Image.HOUSE)
 
 PACKET_SIZE = 64
 

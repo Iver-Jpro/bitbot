@@ -248,10 +248,6 @@ class GridWithPoint():
             point_image = point_image.resize((CARD_WIDTH // 10, CARD_HEIGHT // 10))
             self.point_images[point] = ImageTk.PhotoImage(point_image)
 
-        # Create a label for the grid image
-
-        # self.canvas.create_image(0, 0, image=self.grid_photo, anchor=tk.NW)
-
         self.draw_robot("A", 2)
 
     def draw_robot(self, x, y):
@@ -276,7 +272,7 @@ class GridWithPoint():
     def calculate_grid_pos(self, x, y, size=1):
         # Convert A-E to numerical coordinates
         yPos = 6 - (ord(x.upper()) - ord('A') + 1)
-        xPos = 6-y
+        xPos = 6 - y
         # Calculate the pixel position based on the grid size
         point_x = ((self.grid_width // 6) + 3) * xPos - CARD_WIDTH // 20 * size
         point_y = ((self.grid_height // 5) + 2) * (yPos - 1) - CARD_HEIGHT // 20 * size
@@ -300,8 +296,8 @@ class Gamestate(Enum):
 
 
 class App(tk.Tk):
-    ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
-    ser.timeout = 1
+    # ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
+    # ser.timeout = 1
 
     def __init__(self):
         super().__init__()
@@ -375,8 +371,8 @@ class App(tk.Tk):
         self.score_label.place(x=4 * CARD_WIDTH + CARD_WIDTH, y=2 * CARD_HEIGHT)
 
         # Create a label for the "GAME OVER" text
-        self.message_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=GAME_OVER_FONT, fg="red",
-                                      bg='blue')
+        self.message_label = tk.Label(self, text="GAME OVER\n\nFinal Score: X", font=GAME_OVER_FONT, fg="black",
+                                      bg='#72a2c0')
         self.message_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         self.message_label.lower()  # Send it to the back initially
 
@@ -444,6 +440,11 @@ class App(tk.Tk):
 
         self.draw_button.config(state=tk.DISABLED)
 
+    def hide_cards(self):
+        for card in self.cards:
+            card.place_forget()
+
+
     def update_timer(self):
         if self.timer_running:
             current_time = self.remaining_time.get()
@@ -460,7 +461,8 @@ class App(tk.Tk):
         if last_pos is None:
             self.message_label.config(text=f"Please move robocar to Start position")
         else:
-            self.message_label.config(text=f"Please move robocar to position {last_pos.xPosition}{last_pos.yPosition}\n\nClick to continue")
+            self.message_label.config(
+                text=f"Please move robocar to position {last_pos.xPosition}{last_pos.yPosition}\n\nClick to continue")
         self.allow_hide = False
         self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
         self.message_label.lift()
@@ -533,12 +535,11 @@ class App(tk.Tk):
         if event.keysym == "Escape":
             self.allow_hide = True
             self.hide_game_over(None)
-            self.gamestate = Gamestate.PLAYING
-            self.draw_button.config(state=tk.NORMAL)
+            self.prepare_new_game()
             return
 
         allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ"
-        # todo: handle escape
+
         if self.gamestate == Gamestate.ENTER_EMAIL:
 
             if event.keysym == "BackSpace":
@@ -577,11 +578,18 @@ class App(tk.Tk):
         self.allow_hide = True
         self.is_high_score = False
         self.hide_game_over(None)
+        self.prepare_new_game()
+
+    def prepare_new_game(self):
         self.gamestate = Gamestate.PLAYING
         self.score = 0
+        self.remaining_time = 30
         self.update_score_display()
+        self.timer_text.set(f"Time left: 30")
         self.place_points_markers()
+        self.grid_with_point.draw_robot("A", 2)
         self.draw_button.config(state=tk.NORMAL)
+        self.hide_cards()
 
     def enable_hide(self):
         """Allow the message text to be hidden."""
@@ -593,9 +601,9 @@ class App(tk.Tk):
         if self.allow_hide:
             tk.Misc.lower(self.message_label, self.canvas)  # Send the canvas to the back
             # self.draw_button.config(state=tk.NORMAL)
-            #self.score = 0
-            #self.update_score_display()
-            #self.place_points_markers()
+            # self.score = 0
+            # self.update_score_display()
+            # self.place_points_markers()
 
     def listenToTheRadio(self):
         global gameboard
@@ -606,7 +614,7 @@ class App(tk.Tk):
 
                 usbMessage = self.ser.read(64).decode('utf-8').rstrip()
 
-                #print(usbMessage)
+                # print(usbMessage)
                 messages = usbMessage.split("\n")
 
                 for message in messages:
@@ -633,7 +641,7 @@ class App(tk.Tk):
                     else:
                         try:
                             rfid = int(message)
-                            print (rfid)
+                            print(rfid)
                             if gameboard.get(rfid) is not None:
                                 last_rfid = rfid
                                 self.addPoints(rfid)

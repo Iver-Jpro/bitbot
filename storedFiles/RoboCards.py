@@ -39,6 +39,12 @@ for i in range(1, len(sys.argv)):
             print("Error: --usb_port argument provided but no value given.")
             sys.exit(1)
 
+    if sys.argv[i] == '--secret':
+        try:
+            HighScore.secret = sys.argv[i + 1]
+        except IndexError:
+            print("Error: --secret argument provided but no value given.")
+            sys.exit(1)
     if sys.argv[i] == '--scale':
         try:
             SCALE = float(sys.argv[i + 1])

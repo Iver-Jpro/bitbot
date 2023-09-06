@@ -3,6 +3,7 @@ import random
 import sys
 import threading
 import tkinter as tk
+from datetime import datetime
 from enum import Enum
 import HighScore
 
@@ -15,7 +16,7 @@ CARD_CODES = 'LRFU2'
 CARDS_DRAW = 6
 NUM_SLOTS = 4
 
-ROUND_TIME = 30
+ROUND_TIME = 40
 
 BG_COLOR = '#FFE1B7'
 ARCADE_FONT = ("Press Start 2P", 40)  # Adjust the size as needed
@@ -411,8 +412,8 @@ class App(tk.Tk):
         drawn_cards = [drawn_special_card] if drawn_special_card else []
 
         # Decide if we should draw a "U" card
-        if random.choice([True, False]):
-            drawn_cards.append("U")
+        #if random.choice([True, False]):
+        #    drawn_cards.append("U")
 
         # Fill the rest of the slots with the other card types
         for _ in range(CARDS_DRAW - len(drawn_cards)):
@@ -616,7 +617,18 @@ class App(tk.Tk):
     def listenToTheRadio(self):
         global gameboard
         last_rfid = 0
+        run_start = datetime.now().timestamp()
+        timeout = 45
         while not self.timer_running:
+
+            #handle timeout
+            if datetime.now().timestamp() - run_start > timeout:
+                self.play_count += 1
+                if self.play_count >= MAX_PLAYS:
+                    self.after(0, self.game_over())
+
+                self.after(0, self.draw_button.config(state=tk.NORMAL))
+                return  # break out of the loop
 
             if self.ser.in_waiting > 1:
 

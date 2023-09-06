@@ -297,8 +297,8 @@ class Gamestate(Enum):
 
 
 class App(tk.Tk):
-    # ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
-    # ser.timeout = 1
+    ser = serial.Serial(USB_PORT, 115200)  # Change 'COM3' to the appropriate COM port
+    ser.timeout = 1
 
     def __init__(self):
         super().__init__()

@@ -294,6 +294,7 @@ class Gamestate(Enum):
     PLAYING = 1
     ENTER_EMAIL = 2
     ENTER_NAME = 3
+    DRIVING = 4
 
 
 class App(tk.Tk):
@@ -355,6 +356,9 @@ class App(tk.Tk):
 
         self.reset_button = tk.Button(self, text="Reset Game", command=self.prepare_new_game, bg=BG_COLOR, font=("Press Start 2P", 10), width=button_width, height=button_height)
         self.reset_button.place(x=4 * CARD_WIDTH, y=drawbuttonY+400)
+
+        self.re_send_button = tk.Button(self, text="Resend", command=self.resend, bg=BG_COLOR, font=("Press Start 2P", 10), width=button_width, height=button_height)
+        self.re_send_button.place(x=6 * CARD_WIDTH, y=drawbuttonY+400)
 
         # Timer label
         self.remaining_time = tk.IntVar(value=ROUND_TIME)
@@ -474,11 +478,15 @@ class App(tk.Tk):
         self.message_label.lift()
 
     def execute(self):
+        if self.gamestate == Gamestate.DRIVING:
+            self.resend()
+            return
+
         # Don't do anything if no cards have been placed
 
         if all(x.card is None for x in self.slots):
             self.play_count += 1
-            self.execute_button.config(state=tk.DISABLED)
+            #self.execute_button.config(state=tk.DISABLED)
             self.timer_running = False
 
             if self.play_count >= MAX_PLAYS:
@@ -489,8 +497,9 @@ class App(tk.Tk):
 
             return
 
-        self.execute_button.config(state=tk.DISABLED)
+        #self.execute_button.config(state=tk.DISABLED)
 
+        self.gamestate=Gamestate.DRIVING
         # Generate the command using only filled slots
         cardlabels = "".join([slot.card.code for slot in self.slots if slot.card is not None])
         if self.play_count == 0:
@@ -505,6 +514,17 @@ class App(tk.Tk):
 
         thread = threading.Thread(target=self.listenToTheRadio)
         thread.start()
+
+    def resend(self):
+        # Generate the command using only filled slots
+        cardlabels = "".join([slot.card.code for slot in self.slots if slot.card is not None])
+        if self.play_count == 0:
+            command = "S"
+        else:
+            command = ""
+        command = command + cardlabels.replace("2", "FF").replace("3", "FFF")
+        print("Resend Command:", command)
+        self.ser.write(command.encode('utf-8'))
 
     def game_over(self, high_score=True):
         """Display the 'GAME OVER' text."""
@@ -618,7 +638,13 @@ class App(tk.Tk):
         global gameboard
         last_rfid = 0
         run_start = datetime.now().timestamp()
-        timeout = 30
+        timeout = 25
+
+        # purge the USB queue
+        while self.ser.in_waiting > 0:
+            purged = self.ser.read(64)
+            print("Purged " + str(purged) + " bytes")
+
         while not self.timer_running:
 
             #handle timeout
@@ -628,6 +654,7 @@ class App(tk.Tk):
                     self.after(0, self.game_over())
 
                 self.after(0, self.draw_button.config(state=tk.NORMAL))
+                self.gamestate=Gamestate.PLAYING
                 return  # break out of the loop
 
             if self.ser.in_waiting > 1:
@@ -642,6 +669,7 @@ class App(tk.Tk):
                         self.display_move_car_message(None)
                         self.draw_button.config(state=tk.DISABLED)
                         self.execute_button.config(state=tk.NORMAL)
+                        self.gamestate=Gamestate.PLAYING
                         return  # break out of the loop
 
                 for message in messages:
@@ -653,9 +681,9 @@ class App(tk.Tk):
                         if len(endmmessages) > 1:
                             try:
                                 reported_points = int(endmmessages[1])
-                                if reported_points > self.score:
-                                    self.score = reported_points
-                                    self.after(0, self.update_score_display)
+
+                                self.score = reported_points
+                                self.after(0, self.update_score_display)
                             except ValueError:
                                 print("Not a number" + endmmessages[1])
                         self.play_count += 1
@@ -664,6 +692,7 @@ class App(tk.Tk):
 
                         self.after(0, self.update_button_text)
                         self.after(0, self.draw_button.config(state=tk.NORMAL))
+                        self.gamestate=Gamestate.PLAYING
                         return  # break out of the loop
                     elif message.find("TIMEOUT") >= 0 or message.find("CRASH") >= 0:
                         self.display_move_car_message(last_rfid)

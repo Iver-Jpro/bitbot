@@ -591,9 +591,9 @@ class App(tk.Tk):
         self.gamestate = Gamestate.PLAYING
         self.score = 0
         self.play_count = 0
-        self.remaining_time.set(30)
+        self.remaining_time.set(ROUND_TIME)
         self.update_score_display()
-        self.timer_text.set(f"Time left: 30")
+        self.timer_text.set(f"Time left: {ROUND_TIME}")
         self.place_points_markers()
         self.grid_with_point.draw_robot("A", 2)
         self.after(0, self.draw_button.config(text="Start Game"))
@@ -618,7 +618,7 @@ class App(tk.Tk):
         global gameboard
         last_rfid = 0
         run_start = datetime.now().timestamp()
-        timeout = 45
+        timeout = 30
         while not self.timer_running:
 
             #handle timeout
@@ -649,6 +649,15 @@ class App(tk.Tk):
 
                     if message.find("RUN_END") >= 0:
 
+                        endmmessages = message.split(" ")
+                        if len(endmmessages) > 1:
+                            try:
+                                reported_points = int(endmmessages[1])
+                                if reported_points > self.score:
+                                    self.score = reported_points
+                                    self.after(0, self.update_score_display)
+                            except ValueError:
+                                print("Not a number" + endmmessages[1])
                         self.play_count += 1
                         if self.play_count >= MAX_PLAYS:
                             self.after(0, self.game_over())

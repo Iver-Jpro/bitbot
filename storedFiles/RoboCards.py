@@ -294,7 +294,6 @@ class Gamestate(Enum):
     PLAYING = 1
     ENTER_EMAIL = 2
     ENTER_NAME = 3
-    DRIVING = 4
 
 
 class App(tk.Tk):
@@ -478,15 +477,11 @@ class App(tk.Tk):
         self.message_label.lift()
 
     def execute(self):
-        if self.gamestate == Gamestate.DRIVING:
-            self.resend()
-            return
-
         # Don't do anything if no cards have been placed
 
         if all(x.card is None for x in self.slots):
             self.play_count += 1
-            #self.execute_button.config(state=tk.DISABLED)
+            self.execute_button.config(state=tk.DISABLED)
             self.timer_running = False
 
             if self.play_count >= MAX_PLAYS:
@@ -497,9 +492,8 @@ class App(tk.Tk):
 
             return
 
-        #self.execute_button.config(state=tk.DISABLED)
+        self.execute_button.config(state=tk.DISABLED)
 
-        self.gamestate=Gamestate.DRIVING
         # Generate the command using only filled slots
         cardlabels = "".join([slot.card.code for slot in self.slots if slot.card is not None])
         if self.play_count == 0:
@@ -654,7 +648,6 @@ class App(tk.Tk):
                     self.after(0, self.game_over())
 
                 self.after(0, self.draw_button.config(state=tk.NORMAL))
-                self.gamestate=Gamestate.PLAYING
                 return  # break out of the loop
 
             if self.ser.in_waiting > 1:
@@ -669,7 +662,6 @@ class App(tk.Tk):
                         self.display_move_car_message(None)
                         self.draw_button.config(state=tk.DISABLED)
                         self.execute_button.config(state=tk.NORMAL)
-                        self.gamestate=Gamestate.PLAYING
                         return  # break out of the loop
 
                 for message in messages:
@@ -692,7 +684,6 @@ class App(tk.Tk):
 
                         self.after(0, self.update_button_text)
                         self.after(0, self.draw_button.config(state=tk.NORMAL))
-                        self.gamestate=Gamestate.PLAYING
                         return  # break out of the loop
                     elif message.find("TIMEOUT") >= 0 or message.find("CRASH") >= 0:
                         self.display_move_car_message(last_rfid)

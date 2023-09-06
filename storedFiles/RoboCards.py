@@ -463,11 +463,11 @@ class App(tk.Tk):
 
     def display_move_car_message(self, last_card):
         last_pos = gameboard.get(last_card)
-        if last_pos is None:
-            self.message_label.config(text=f"Please move robocar to Start position")
-        else:
-            self.message_label.config(
-                text=f"Please move robocar to position {last_pos.xPosition}{last_pos.yPosition}\n\nClick to continue")
+        # if last_pos is None:
+        self.message_label.config(text=f"Return the robocar to the Start position\n\nClick to continue")
+        # else:
+        #     self.message_label.config(
+        #         text=f"Please move robocar to position {last_pos.xPosition}{last_pos.yPosition}\n\nClick to continue")
         self.allow_hide = False
         self.after(300, self.enable_hide)  # After 0.3 seconds, allow the click event to hide the text
         self.message_label.lift()
